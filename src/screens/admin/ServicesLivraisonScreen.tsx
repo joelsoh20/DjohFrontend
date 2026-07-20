@@ -50,12 +50,19 @@ export const ServicesLivraisonScreen: React.FC = () => {
   };
 
   const handleAjouterStock = async () => {
-    if (!selectedProduct || !quantite || !selectedService) return;
+  if (!selectedProduct || !quantite || !selectedService) return;
+  
+  try {
     await serviceLivraisonService.ajouterStock(selectedService.id, selectedProduct, parseInt(quantite));
-    Alert.alert('Succès', 'Stock ajouté');
-    setQuantite(''); setSelectedProduct(null);
+    Alert.alert('Succès', 'Stock transféré au service');
+    setQuantite('');
+    setSelectedProduct(null);
     charger();
-  };
+  } catch (err: any) {
+    const message = err.response?.data?.message || 'Erreur';
+    Alert.alert('Stock insuffisant', message);
+  }
+};
 
   const handleToggle = async (id: string) => {
     if (!isAdmin) {

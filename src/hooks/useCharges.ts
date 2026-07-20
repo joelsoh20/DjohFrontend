@@ -62,10 +62,17 @@ export const useCharges = (): UseChargesReturn => {
 
   // Charger le résumé mensuel
   useEffect(() => {
-    chargeService.getResumeMensuel().then(res => {
-      if (res.success) setResume(res.data);
-    });
-  }, [charges]);
+  const chargerResume = async () => {
+    try {
+      const res = await chargeService.getResumeMensuel();
+      if (res?.success) setResume(res.data);
+    } catch (err) {
+      // Ignorer l'erreur silencieusement
+      console.log('Resume mensuel non disponible');
+    }
+  };
+  chargerResume();
+}, [charges]);
 
   const refresh = useCallback(() => chargerCharges(false), [chargerCharges]);
   const onRefresh = useCallback(() => chargerCharges(true), [chargerCharges]);
