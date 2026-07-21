@@ -47,7 +47,9 @@ export const notificationService = {
 
   // Obtenir le token Expo Push
   getExpoPushToken: async () => {
-    const token = await Notifications.getExpoPushTokenAsync();
+    const token = await Notifications.getExpoPushTokenAsync({
+      projectId: '29287523-3a5f-413b-8fe1-4326daff789c',
+    });
     return token.data;
   },
 

@@ -4,12 +4,12 @@
     "slug": "NDJOH-AGOGO",
     "version": "2.2.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.jpeg",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "ndjohagogo",
     "newArchEnabled": true,
     "updates": {
-      "enabled": true,
+      "enabled": false,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
       "url": "https://u.expo.dev/29287523-3a5f-413b-8fe1-4326daff789c"
@@ -21,7 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.jpeg"
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "package": "com.ndjohagogo.app"
     },
@@ -30,7 +30,8 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-font"
     ],
     "extra": {
       "eas": {
