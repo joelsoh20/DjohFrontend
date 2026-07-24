@@ -18,42 +18,43 @@ export const CommercialStatsCard: React.FC<CommercialStatsCardProps> = ({ stats 
   const { utilisateur } = useAuth();
 
   const kpis = [
-  {
-    icon: 'cart-outline' as const,
-    label: 'Produits vendus',
-    value: `${stats.produitsVendus || 0}`,
-    color: theme.primary,
-    bg: theme.primaryLight,
-  },
-  {
-    icon: 'cash-outline' as const,
-    label: 'Total ventes',
-    value: formatMonnaie(stats.totalVentes || 0),
-    color: theme.secondary,
-    bg: theme.secondaryLight,
-  },
-  {
-    icon: 'gift-outline' as const,
-    label: 'Commission',
-    value: formatMonnaie(stats.commissionTotale || 0),
-    color: '#FF6B35',
-    bg: '#FFF0E6',
-  },
-  {
-    icon: 'checkmark-done-outline' as const,
-    label: 'Livrées',
-    value: `${stats.commandesLivrees || 0} commandes`,
-    color: theme.secondary,
-    bg: theme.secondaryLight,
-  },
-  {
-    icon: 'ribbon-outline' as const,
-    label: 'Bonus',
-    value: stats.bonus > 0 ? `+${formatMonnaie(stats.bonus)} 🎉` : '0 FCFA',
-    color: '#FFD700',
-    bg: '#FFF8E1',
-  },
-];
+    {
+      icon: 'cart-outline' as const,
+      label: 'Produits vendus',
+      value: `${stats.produitsVendus || 0}`,
+      color: theme.primary,
+      bg: theme.primaryLight,
+    },
+    {
+      icon: 'cash-outline' as const,
+      label: 'Total ventes',
+      value: formatMonnaie(stats.totalVentes || 0),
+      color: theme.secondary,
+      bg: theme.secondaryLight,
+    },
+    {
+      icon: 'gift-outline' as const,
+      label: 'Commission',
+      value: formatMonnaie(stats.commissionTotale || 0),
+      color: '#FF6B35',
+      bg: '#FFF0E6',
+    },
+    {
+      icon: 'checkmark-done-outline' as const,
+      label: 'Livrées',
+      value: `${stats.commandesLivrees || 0} commandes`,
+      color: theme.secondary,
+      bg: theme.secondaryLight,
+    },
+    {
+      icon: 'ribbon-outline' as const,
+      label: 'Bonus',
+      value: stats.bonus > 0 ? `+${formatMonnaie(stats.bonus)} 🎉` : '0 FCFA',
+      color: '#FFD700',
+      bg: '#FFF8E1',
+    },
+  ];
+
   return (
     <View style={[styles.container, { backgroundColor: theme.surface }]}>
       {/* En-tête */}
@@ -81,6 +82,22 @@ export const CommercialStatsCard: React.FC<CommercialStatsCardProps> = ({ stats 
           </View>
         ))}
       </View>
+
+      {/* Évolution 6 mois */}
+      {stats.evolution && stats.evolution.length > 0 && (
+        <View style={[styles.evolutionCard, { backgroundColor: theme.surfaceVariant }]}>
+          <Text style={[styles.evolutionTitle, { color: theme.text }]}>📈 Évolution 6 mois</Text>
+          {stats.evolution.map((e: any, i: number) => (
+            <View key={i} style={[styles.evoRow, { borderBottomColor: theme.divider }]}>
+              <Text style={[styles.evoMois, { color: theme.textSecondary }]}>{e.mois}</Text>
+              <Text style={[styles.evoCmd, { color: theme.text }]}>{e.nb_commandes || 0} cmd</Text>
+              <Text style={[styles.evoVal, { color: theme.primary, fontWeight: '600' }]}>
+                {formatMonnaie(e.total_ventes || 0)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 };
@@ -106,9 +123,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', gap: 10,
   },
   kpiItem: {
-    width: '47%', padding: 14, borderRadius: 12,
-    alignItems: 'center',
+    width: '47%', padding: 14, borderRadius: 12, alignItems: 'center',
   },
   kpiValue: { fontSize: 16, fontWeight: 'bold', marginTop: 8 },
   kpiLabel: { fontSize: 11, marginTop: 2, textAlign: 'center' },
+  evolutionCard: { marginTop: 14, padding: 12, borderRadius: 10 },
+  evolutionTitle: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  evoRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1,
+  },
+  evoMois: { fontSize: 12, width: 65 },
+  evoCmd: { fontSize: 12, width: 40 },
+  evoVal: { fontSize: 13 },
 });

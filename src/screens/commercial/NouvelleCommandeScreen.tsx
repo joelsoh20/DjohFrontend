@@ -48,8 +48,8 @@ export const NouvelleCommandeScreen: React.FC<{ navigation: any }> = ({ navigati
       </View>
 
       <View style={[styles.section, { backgroundColor: theme.surface }]}>
-        <Input label="Numéro du client" value={formData.client_telephone} onChangeText={(v) => updateField('client_telephone', v)} placeholder="Tkc" keyboardType="phone-pad" />
-        <Input label="Adresse de livraison" value={formData.client_quartier} onChangeText={(v) => updateField('client_quartier', v)} placeholder="652625546" />
+        <Input label="Numéro du client" value={formData.client_telephone} onChangeText={(v) => updateField('client_telephone', v)} placeholder="652625546" keyboardType="phone-pad" />
+        <Input label="Adresse de livraison" value={formData.client_quartier} onChangeText={(v) => updateField('client_quartier', v)} placeholder="Tkc" />
         <Input label="Montant à percevoir (FCFA)" value={formData.prix} onChangeText={(v) => updateField('prix', v)} placeholder="14500" keyboardType="numeric" />
       </View>
 

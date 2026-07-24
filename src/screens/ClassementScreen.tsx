@@ -14,7 +14,7 @@ export const ClassementScreen: React.FC<{ navigation: any }> = ({ navigation }) 
 
   useEffect(() => {
   statsService.getClassement().then(res => {
-    console.log('Classement reçu:', JSON.stringify(res));
+    // console.log('Classement reçu:', JSON.stringify(res)); // Ajout du log pour vérifier la réponse
     if (res.success) setClassement(res.data);
     setLoading(false);
   }).catch(err => {

@@ -96,6 +96,7 @@ export interface CommissionSnapshot {
 // Dashboard
 export interface DashboardData {
   jour: StatsPeriode;
+  hier: StatsPeriode;
   semaine: StatsPeriode;
   mois: StatsMois;
   semestre: StatsSemestre;

@@ -71,7 +71,7 @@ export const LoginScreen: React.FC = () => {
         {/* Logo / Titre */}
         <View style={styles.logoContainer}>
   <Image 
-    source={require('../../../assets/logo.jpeg')}
+    source={require('../../../assets/logo.png')}
     style={styles.logo}
     resizeMode="contain"
   />
@@ -137,7 +137,7 @@ export const LoginScreen: React.FC = () => {
 
         {/* Pied de page */}
         <Text style={[styles.footer, { color: theme.textTertiary }]}>
-          {t('parametres.version')} 1.0.0
+          {t('parametres.version')} 2.2.1
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>

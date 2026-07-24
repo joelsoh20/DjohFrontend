@@ -11,8 +11,8 @@ export interface CommercialStats {
   bonus: number;
   totalCommandesMois: number;
   dernieresCommandes: any[];
+  evolution?: { mois: string; nb_commandes: number; total_ventes: number }[];
 }
-
 export const useCommercialDashboard = () => {
   const [stats, setStats] = useState<CommercialStats>({
     commandesEnvoyees: 0,
@@ -28,27 +28,30 @@ export const useCommercialDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const charger = useCallback(async () => {
-    try {
-      const res = await commandeService.getMonDashboard();
-      if (res.success && res.data) {
-        setStats({
-          commandesEnvoyees: res.data.commandesEnvoyees || 0,
-          commandesLivrees: res.data.commandesLivrees || 0,
-          commandesAnnulees: res.data.commandesAnnulees || 0,
-          commissionTotale: res.data.commissionTotale || 0,
-          produitsVendus: res.data.produitsVendus || 0,
-          totalVentes: res.data.totalVentes || 0,
-          bonus: res.data.bonus || 0,
-          totalCommandesMois: res.data.totalCommandesMois || 0,
-          dernieresCommandes: res.data.dernieresCommandes || []
-        });
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+  try {
+    console.log('Appel mon-dashboard...');
+    const res = await commandeService.getMonDashboard();
+    console.log('Réponse mon-dashboard:', JSON.stringify(res));
+    if (res.success && res.data) {
+      setStats({
+        commandesEnvoyees: res.data.commandesEnvoyees || 0,
+        commandesLivrees: res.data.commandesLivrees || 0,
+        commandesAnnulees: res.data.commandesAnnulees || 0,
+        commissionTotale: res.data.commissionTotale || 0,
+        produitsVendus: res.data.produitsVendus || 0,
+        totalVentes: res.data.totalVentes || 0,
+        bonus: res.data.bonus || 0,
+        totalCommandesMois: res.data.totalCommandesMois || 0,
+        evolution: res.data.evolution || [],
+        dernieresCommandes: res.data.dernieresCommandes || []
+      });
     }
-  }, []);
+  } catch (err: any) {
+    console.log('Erreur mon-dashboard:', err?.message);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => { charger(); }, [charger]);
 

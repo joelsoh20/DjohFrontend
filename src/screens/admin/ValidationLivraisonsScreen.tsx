@@ -33,18 +33,16 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
   const [motifAnnulation, setMotifAnnulation] = useState('');
   const [traitees, setTraitees] = useState<Set<string>>(new Set());
 
-  // Charger les commandes traitées
   useEffect(() => {
     AsyncStorage.getItem('traitees').then(data => {
       if (data) setTraitees(new Set(JSON.parse(data)));
     });
   }, []);
 
-  // Rechargement auto toutes les 10s
   useEffect(() => {
-  const interval = setInterval(() => onRefresh(), 5000);
-  return () => clearInterval(interval);
-}, [onRefresh]);
+    const interval = setInterval(() => onRefresh(), 5000);
+    return () => clearInterval(interval);
+  }, [onRefresh]);
 
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => refresh());
@@ -83,11 +81,11 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
   }, [commandesFiltrees]);
 
   const handleCopyWhatsApp = (groupe: any) => {
-  const produits = groupe.produits.map((p: any) => `📌 ${p.nom} x${p.quantite}`).join('\n');
-  const message = `🛍️ *NDJOH AGOGO*\n\n📦 *Nature du produit* :\n${produits}\n\n📞 *Numéro du client* :\n${groupe.client_telephone || 'N/A'}\n\n📍 *Adresse de livraison*\n${groupe.client_quartier || 'N/A'}\n\n💰 *Montant à percevoir*\n${formatMonnaie(groupe.total)}`;
-  Clipboard.setStringAsync(message);
-  Alert.alert('✅ Copié !', 'Message WhatsApp prêt à être envoyé.');
-};
+    const produits = groupe.produits.map((p: any) => `📌 ${p.nom} x${p.quantite}`).join('\n');
+    const message = `🛍️ *NDJOH AGOGO*\n\n📦 *Nature du produit* :\n${produits}\n\n📞 *Numéro du client* :\n${groupe.client_telephone || 'N/A'}\n\n📍 *Adresse de livraison*\n${groupe.client_quartier || 'N/A'}\n\n💰 *Montant à percevoir*\n${formatMonnaie(groupe.total)}`;
+    Clipboard.setStringAsync(message);
+    Alert.alert('✅ Copié !', 'Message WhatsApp prêt à être envoyé.');
+  };
 
   const handleValidee = async (item: any) => {
     handleCopyWhatsApp(item);
@@ -156,8 +154,10 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
                   <Text style={[styles.info, { color: theme.textTertiary }]}>📍 {item.client_quartier || 'N/A'}</Text>
                   <Text style={[styles.info, { color: theme.textTertiary }]}>👩‍💼 {item.commercial_nom}</Text>
                 </View>
-                <View style={[styles.badge, { backgroundColor: theme.warningLight }]}>
-                  <Text style={[styles.badgeText, { color: theme.warning }]}>En attente</Text>
+                <View style={[styles.badge, { backgroundColor: estTraitee ? theme.secondaryLight : theme.warningLight }]}>
+                  <Text style={[styles.badgeText, { color: estTraitee ? theme.secondary : theme.warning }]}>
+                    {estTraitee ? 'Validée' : 'En attente'}
+                  </Text>
                 </View>
               </View>
               <View style={[styles.divider, { backgroundColor: theme.divider }]} />
@@ -206,7 +206,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
             <Text style={[styles.modalTitle, { color: theme.text }]}>Valider la commande</Text>
             <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Frais de livraison</Text>
             <View style={styles.fraisRow}>
-              {[1000, 1500, 2000, 2500].map(frais => (
+              {[0, 500, 1000, 1500, 2000, 2500].map(frais => (
                 <TouchableOpacity key={frais} style={[styles.fraisBtn, { backgroundColor: fraisChoisi === frais ? theme.primary : theme.surfaceVariant }]} onPress={() => setFraisChoisi(frais)}>
                   <Text style={{ color: fraisChoisi === frais ? '#FFF' : theme.text, fontWeight: '600' }}>{frais} F</Text>
                 </TouchableOpacity>

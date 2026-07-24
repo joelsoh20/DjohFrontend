@@ -14,6 +14,8 @@ import { EvolutionChart } from '../../components/dashboard/EvolutionChart';
 import { TopProduitsCard } from '../../components/dashboard/TopProduitsCard';
 import { RecapPeriodeCard } from '../../components/dashboard/RecapPeriodeCard';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { formatMonnaie } from '../../utils/formatMonnaie';
+import Ionicons from '@expo/vector-icons/build/Ionicons';
 
 export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
@@ -95,27 +97,36 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
         }
         showsVerticalScrollIndicator={false}
       >
+             {/* <View style={styles.kpiRow}>
+  <View style={[styles.kpiCard, { backgroundColor: theme.surface, padding: 16, borderRadius: 14, alignItems: 'center' }]}>
+  <Ionicons name="calendar-outline" size={24} color={theme.textSecondary} />
+  <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 4 }}>Ventes d'hier</Text>
+  <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text }}>
+    {formatMonnaie(dashboard.hier?.chiffreAffaires || 0)}
+  </Text>
+</View>
+</View> */}
         {/* Sélecteur de période */}
         <PeriodeSelector active={periodeActive} onChange={setPeriodeActive} />
 
         {/* KPIs */}
         <View style={styles.kpiRow}>
           <KpiCard
-            title={t('dashboard.revenue')}
-            value={activeStats.ca}
-            icon="trending-up"
+            title={t('dashboard.today')}
+            value={dashboard.jour?.chiffreAffaires || 0}
+            icon="today-outline"
             backgroundColor={theme.primaryLight}
             iconColor={theme.primary}
           />
           <KpiCard
-            title={t('dashboard.netProfit')}
-            value={activeStats.benefice}
-            icon="wallet"
-            backgroundColor={theme.secondaryLight}
-            iconColor={theme.secondary}
+            title="Hier"
+            value={dashboard.hier?.chiffreAffaires || 0}
+            icon="calendar-outline"
+            backgroundColor={theme.surfaceVariant}
+            iconColor={theme.textSecondary}
           />
         </View>
-
+      
         {/* Charges du mois */}
         <ChargesCard totalCharges={dashboard.mois.totalCharges || 0} />
 
@@ -150,5 +161,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
     marginTop: 16,
+  },
+  kpiCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  kpiLabel: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
