@@ -26,6 +26,9 @@ export const ServicesLivraisonScreen: React.FC = () => {
 
   const isManager = utilisateur?.role === 'manager';
   const canEdit = isAdmin || isManager;
+  const [loadingCreate, setLoadingCreate] = useState(false);
+const [loadingStock, setLoadingStock] = useState(false);
+const [loadingDelete, setLoadingDelete] = useState(false);
 
   const charger = async () => {
     try {
@@ -41,17 +44,33 @@ export const ServicesLivraisonScreen: React.FC = () => {
 
   useFocusEffect(React.useCallback(() => { charger(); }, []));
 
-  const handleCreate = async () => {
-    if (!nom.trim()) return;
+ const handleCreate = async () => {
+  if (loadingCreate || !nom.trim()) return;
+  setLoadingCreate(true);
+  try {
     await serviceLivraisonService.create({ nom: nom.trim(), contact, zone });
     Alert.alert('Succès', 'Service créé');
     setNom(''); setContact(''); setZone(''); setShowAdd(false);
     charger();
-  };
+  } catch (err: any) {
+    Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+  } finally {
+    setLoadingCreate(false);
+  }
+};
 
-  const handleAjouterStock = async () => {
-  if (!selectedProduct || !quantite || !selectedService) return;
-  
+const handleToggle = async (id: string) => {
+  if (!isAdmin) {
+    Alert.alert('Accès refusé', 'Seul l\'administrateur peut activer/désactiver un service.');
+    return;
+  }
+  await serviceLivraisonService.toggleActif(id);
+  charger();
+};
+
+const handleAjouterStock = async () => {
+  if (loadingStock || !selectedProduct || !quantite || !selectedService) return;
+  setLoadingStock(true);
   try {
     await serviceLivraisonService.ajouterStock(selectedService.id, selectedProduct, parseInt(quantite));
     Alert.alert('Succès', 'Stock transféré au service');
@@ -61,18 +80,37 @@ export const ServicesLivraisonScreen: React.FC = () => {
   } catch (err: any) {
     const message = err.response?.data?.message || 'Erreur';
     Alert.alert('Stock insuffisant', message);
+  } finally {
+    setLoadingStock(false);
   }
 };
 
-  const handleToggle = async (id: string) => {
-    if (!isAdmin) {
-      Alert.alert('Accès refusé', 'Seul l\'administrateur peut activer/désactiver un service.');
-      return;
-    }
-    await serviceLivraisonService.toggleActif(id);
-    charger();
-  };
-
+const handleDelete = async (id: string, nom: string) => {
+  if (loadingDelete) return;
+  Alert.alert(
+    'Supprimer le service',
+    `Voulez-vous vraiment supprimer "${nom}" ?`,
+    [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          setLoadingDelete(true);
+          try {
+            await serviceLivraisonService.delete(id);
+            Alert.alert('Succès', 'Service supprimé');
+            charger();
+          } catch (err: any) {
+            Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+          } finally {
+            setLoadingDelete(false);
+          }
+        }
+      }
+    ]
+  );
+};
   if (loading) return <LoadingSpinner fullScreen />;
 
   const renderService = ({ item }: any) => (
@@ -98,6 +136,11 @@ export const ServicesLivraisonScreen: React.FC = () => {
               <Ionicons name={item.actif ? 'eye' : 'eye-off'} size={20} color={item.actif ? theme.secondary : theme.danger} />
             </TouchableOpacity>
           )}
+          {isAdmin && (
+  <TouchableOpacity onPress={() => handleDelete(item.id, item.nom)}>
+    <Ionicons name="trash-outline" size={20} color={theme.danger} />
+  </TouchableOpacity>
+)}
         </View>
       </View>
 
@@ -172,8 +215,8 @@ export const ServicesLivraisonScreen: React.FC = () => {
             </ScrollView>
             <TextInput style={[styles.input, { backgroundColor: theme.surfaceVariant, color: theme.text }]} placeholder="Quantité" keyboardType="numeric" value={quantite} onChangeText={setQuantite} />
             <View style={styles.modalBtns}>
-              <Button title="Fermer" onPress={() => setShowStock(false)} variant="outline" />
-              {canEdit && <Button title="Ajouter" onPress={handleAjouterStock} />}
+              <Button title="Créer" onPress={handleCreate} loading={loadingCreate} disabled={loadingCreate} />
+              <Button title="Ajouter" onPress={handleAjouterStock} loading={loadingStock} disabled={loadingStock} />
             </View>
           </View>
         </View>

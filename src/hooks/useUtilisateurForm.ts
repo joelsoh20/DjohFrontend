@@ -21,7 +21,7 @@ interface UseUtilisateurFormReturn {
   utilisateur: Utilisateur | null;
   produits: Produit[];
   commissionsProduits: ProductCommission[];
-  updateField: (field: keyof FormData, value: string) => void;
+  updateField: (field: string, value: string) => void;
   setCommissionMode: (mode: CommissionMode) => void;
   validateForm: () => boolean;
   handleSubmit: () => Promise<boolean>;
@@ -81,7 +81,7 @@ export const useUtilisateurForm = (userId?: string): UseUtilisateurFormReturn =>
   }, [userId, isEdit]);
 
 
-  const updateField = useCallback((field: keyof FormData, value: string) => {
+  const updateField = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   }, [errors]);

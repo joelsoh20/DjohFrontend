@@ -40,26 +40,27 @@ export const StockScreen: React.FC = () => {
   useEffect(() => { charger(); }, []);
 
   const handleAjouter = async () => {
-    if (!canEdit) {
-      Alert.alert('Accès refusé', 'Vous ne pouvez pas modifier le stock.');
-      return;
-    }
-    if (!selectedProduct || !quantite) {
-      Alert.alert('Erreur', 'Sélectionnez un produit et une quantité');
-      return;
-    }
-    setLoadingSubmit(true);
-    try {
-      await stockService.ajouter(selectedProduct, parseInt(quantite));
-      Alert.alert('Succès', 'Stock mis à jour');
-      setQuantite('');
-      charger();
-    } catch (err: any) {
-      Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
-    } finally {
-      setLoadingSubmit(false);
-    }
-  };
+  if (loadingSubmit) return; // ← Ici, avant tout
+  if (!canEdit) {
+    Alert.alert('Accès refusé', 'Vous ne pouvez pas modifier le stock.');
+    return;
+  }
+  if (!selectedProduct || !quantite) {
+    Alert.alert('Erreur', 'Sélectionnez un produit et une quantité');
+    return;
+  }
+  setLoadingSubmit(true);
+  try {
+    await stockService.ajouter(selectedProduct, parseInt(quantite));
+    Alert.alert('Succès', 'Stock mis à jour');
+    setQuantite('');
+    charger();
+  } catch (err: any) {
+    Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+  } finally {
+    setLoadingSubmit(false);
+  }
+};
 
   if (loading) return <LoadingSpinner fullScreen />;
 

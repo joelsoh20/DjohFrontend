@@ -9,6 +9,10 @@ export const serviceLivraisonService = {
     const response = await api.post('/services-livraison', data);
     return response.data;
   },
+  delete: async (id: string) => {
+  const res = await api.delete(`/services-livraison/${id}`);
+  return res.data;
+},
   toggleActif: async (id: string) => {
     const response = await api.patch(`/services-livraison/${id}/toggle`);
     return response.data;

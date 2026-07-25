@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, FlatList, TouchableOpacity, Text, StyleSheet, RefreshControl } from 'react-native';
+import { View, FlatList, TouchableOpacity, Text, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
@@ -10,6 +10,7 @@ import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { EmptyState } from '../../components/EmptyState';
 import { formatMonnaie } from '../../utils/formatMonnaie';
 import { formatDateCourte } from '../../utils/formatDate';
+import { commandeService } from '../../services/commandeService';
 
 export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
@@ -26,25 +27,26 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
     return unsubscribe;
   }, [navigation, refresh]);
 
-  // Grouper par group_id
   const commandesGroupees = useMemo(() => {
     const groupeMap = new Map<string, any>();
     for (const cmd of commandesFiltrees) {
       const key = (cmd as any).group_id || cmd.id;
       if (!groupeMap.has(key)) {
-  groupeMap.set(key, {
-    id: key,
-    client_nom: cmd.client_nom,
-    client_telephone: cmd.client_telephone,
-    client_quartier: cmd.client_quartier,
-    date_creation: cmd.date_creation,
-    statut: cmd.statut,
-    commercial_nom: (cmd as any).commercial?.nom || 'Inconnu',
-    produits: [],
-    total: 0,
-  });
-}
+        groupeMap.set(key, {
+          id: key,
+          client_nom: cmd.client_nom,
+          client_telephone: cmd.client_telephone,
+          client_quartier: cmd.client_quartier,
+          date_creation: cmd.date_creation,
+          statut: cmd.statut,
+          commercial_nom: (cmd as any).commercial?.nom || 'Inconnu',
+          commandes: [],
+          produits: [],
+          total: 0,
+        });
+      }
       const groupe = groupeMap.get(key);
+      groupe.commandes.push(cmd);
       groupe.total += Number(cmd.prix_unitaire_reel) * cmd.quantite;
       groupe.produits.push({
         nom: (cmd as any).produit?.nom || 'Inconnu',
@@ -73,7 +75,6 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
       default: return statut;
     }
   };
-  
 
   if (loading && commandesFiltrees.length === 0) {
     return (
@@ -91,31 +92,73 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
       <FlatList
         data={commandesGroupees}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={[styles.card, { backgroundColor: theme.surface }]}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.clientName, { color: theme.text }]}>👤 {item.client_nom}</Text>
-                <Text style={[styles.info, { color: theme.textTertiary }]}>📱 {item.client_telephone || 'N/A'} • 📍 {item.client_quartier || 'N/A'}</Text>
-                <Text style={[styles.info, { color: theme.textTertiary }]}>{formatDateCourte(item.date_creation)}</Text>
-                <Text style={[styles.info, { color: theme.textTertiary }]}>👩‍💼 {item.commercial_nom}</Text>
+        renderItem={({ item }) => {
+          const peutAnnuler = item.statut === 'livree_payee' && item.commandes?.length > 0 && (() => {
+            const dateLivraison = item.commandes[0]?.date_statut_livree;
+            if (!dateLivraison) return false;
+            const uneHeure = 60 * 60 * 1000;
+            return (Date.now() - new Date(dateLivraison).getTime()) < uneHeure;
+          })();
+
+          return (
+            <View style={[styles.card, { backgroundColor: theme.surface }]}>
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.clientName, { color: theme.text }]}>👤 {item.client_nom}</Text>
+                  <Text style={[styles.info, { color: theme.textTertiary }]}>📱 {item.client_telephone || 'N/A'} • 📍 {item.client_quartier || 'N/A'}</Text>
+                  <Text style={[styles.info, { color: theme.textTertiary }]}>{formatDateCourte(item.date_creation)}</Text>
+                  <Text style={[styles.info, { color: theme.textTertiary }]}>👩‍💼 {item.commercial_nom}</Text>
+                </View>
+                <View style={[styles.badge, { backgroundColor: getStatutColor(item.statut) + '20' }]}>
+                  <Text style={[styles.badgeText, { color: getStatutColor(item.statut) }]}>{getStatutLabel(item.statut)}</Text>
+                </View>
               </View>
-              <View style={[styles.badge, { backgroundColor: getStatutColor(item.statut) + '20' }]}>
-                <Text style={[styles.badgeText, { color: getStatutColor(item.statut) }]}>{getStatutLabel(item.statut)}</Text>
+              <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+              <Text style={[styles.label, { color: theme.textSecondary }]}>📦 Produits :</Text>
+              {item.produits.map((p: any, i: number) => (
+                <Text key={i} style={[styles.produit, { color: theme.text }]}>• {p.nom} x{p.quantite}</Text>
+              ))}
+              <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+              <View style={styles.totalRow}>
+                <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Total</Text>
+                <Text style={[styles.totalValue, { color: theme.text }]}>{formatMonnaie(item.total)}</Text>
               </View>
+
+              {peutAnnuler && (
+                <TouchableOpacity
+                  style={[styles.annulerBtn, { borderColor: theme.danger }]}
+                  onPress={() => {
+                    Alert.alert(
+                      'Annuler la commande',
+                      'Voulez-vous annuler cette commande et restaurer le stock ?',
+                      [
+                        { text: 'Non', style: 'cancel' },
+                        {
+                          text: 'Oui, annuler',
+                          style: 'destructive',
+                          onPress: async () => {
+                            try {
+                              for (const cmd of item.commandes) {
+                                await commandeService.updateStatut(cmd.id, 'annulee');
+                              }
+                              Alert.alert('Succès', 'Commande annulée et stock restauré.');
+                              refresh();
+                            } catch (err: any) {
+                              Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+                            }
+                          }
+                        }
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons name="close-circle-outline" size={18} color={theme.danger} />
+                  <Text style={[styles.annulerText, { color: theme.danger }]}>Annuler</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-            <Text style={[styles.label, { color: theme.textSecondary }]}>📦 Produits :</Text>
-            {item.produits.map((p: any, i: number) => (
-              <Text key={i} style={[styles.produit, { color: theme.text }]}>• {p.nom} x{p.quantite}</Text>
-            ))}
-            <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-            <View style={styles.totalRow}>
-              <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Total</Text>
-              <Text style={[styles.totalValue, { color: theme.text }]}>{formatMonnaie(item.total)}</Text>
-            </View>
-          </View>
-        )}
+          );
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
@@ -144,4 +187,10 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { fontSize: 14, fontWeight: '600' },
   totalValue: { fontSize: 16, fontWeight: 'bold' },
+  annulerBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, marginTop: 10, paddingVertical: 10,
+    borderRadius: 8, borderWidth: 1.5,
+  },
+  annulerText: { fontSize: 13, fontWeight: '600' },
 });

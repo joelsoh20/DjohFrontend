@@ -4,19 +4,18 @@ import * as SecureStore from 'expo-secure-store';
 // URL du backend
 // En développement : adresse IP de votre PC sur le réseau local
 // En production : URL de votre serveur déployé
-// const getBaseUrl = (): string => {
-//   if (__DEV__) {
-//     // Pendant le développement, on utilise aussi le backend Render
-//     //return 'http://192.168.6.111:5000/api'; //  192.168.6.180 OU 192.168.1.148, 192.168.43.112 ou 192.168.56.1 lorque je suis hors reseau ← Remplacez par votre IP
-//   }
+const getBaseUrl = (): string => {
+  if (__DEV__) {
+    // Pendant le développement, on utilise aussi le backend Render
+    return 'http://192.168.6.120:5000/api'; //  192.168.6.180 OU 192.168.1.148, 192.168.43.112 ou 192.168.56.1 lorque je suis hors reseau ← Remplacez par votre IP
+  }
+  // En production
+  return 'https://votre-domaine.com/api'; // backenddjoh-1.onrender.com
+};
 
-//   // En production
+// const getBaseUrl = (): string => {
 //   return 'https://backenddjoh-1.onrender.com/api';
 // };
-
-const getBaseUrl = (): string => {
-  return 'https://backenddjoh-1.onrender.com/api';
-};
 
 const api = axios.create({
   baseURL: getBaseUrl(),

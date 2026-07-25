@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDashboard } from '../../hooks/useDashboard';
+import { Ionicons } from '@expo/vector-icons';
 
 // Composants
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
@@ -15,7 +16,6 @@ import { TopProduitsCard } from '../../components/dashboard/TopProduitsCard';
 import { RecapPeriodeCard } from '../../components/dashboard/RecapPeriodeCard';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatMonnaie } from '../../utils/formatMonnaie';
-import Ionicons from '@expo/vector-icons/build/Ionicons';
 
 export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
@@ -25,13 +25,11 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
 
   const [periodeActive, setPeriodeActive] = useState<Periode>('mois');
 
-  // Rafraîchir au focus
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => refresh());
     return unsubscribe;
   }, [navigation, refresh]);
 
-  // Obtenir les stats selon la période active
   const getActiveStats = () => {
     if (!dashboard) return { ca: 0, benefice: 0 };
     switch (periodeActive) {
@@ -43,9 +41,6 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
     }
   };
 
-  // ====== ÉTATS ======
-
-  // Chargement initial
   if (loading && !dashboard) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
@@ -54,7 +49,6 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
     );
   }
 
-  // Erreur
   if (error && !dashboard) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
@@ -63,72 +57,82 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
     );
   }
 
-  // Pas de données
   if (!dashboard) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Text style={[styles.errorText, { color: theme.textSecondary }]}>
-          {t('common.noData')}
-        </Text>
+        <Text style={[styles.errorText, { color: theme.textSecondary }]}>{t('common.noData')}</Text>
       </View>
     );
   }
 
-  // ====== RENDU PRINCIPAL ======
   const activeStats = getActiveStats();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header */}
-      <DashboardHeader
-        onToggleTheme={toggleTheme}
-        onLogout={logout}
-      />
+      <DashboardHeader onToggleTheme={toggleTheme} onLogout={logout} />
 
-      {/* Contenu scrollable */}
       <ScrollView
         style={styles.scroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.primary}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
         showsVerticalScrollIndicator={false}
       >
-             {/* <View style={styles.kpiRow}>
-  <View style={[styles.kpiCard, { backgroundColor: theme.surface, padding: 16, borderRadius: 14, alignItems: 'center' }]}>
-  <Ionicons name="calendar-outline" size={24} color={theme.textSecondary} />
-  <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 4 }}>Ventes d'hier</Text>
-  <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text }}>
-    {formatMonnaie(dashboard.hier?.chiffreAffaires || 0)}
-  </Text>
-</View>
-</View> */}
         {/* Sélecteur de période */}
         <PeriodeSelector active={periodeActive} onChange={setPeriodeActive} />
 
-        {/* KPIs */}
+        {/* KPIs CA + Bénéfice */}
         <View style={styles.kpiRow}>
           <KpiCard
-            title={t('dashboard.today')}
-            value={dashboard.jour?.chiffreAffaires || 0}
-            icon="today-outline"
+            title={t('dashboard.revenue')}
+            value={activeStats.ca}
+            icon="trending-up"
             backgroundColor={theme.primaryLight}
             iconColor={theme.primary}
           />
           <KpiCard
-            title="Hier"
-            value={dashboard.hier?.chiffreAffaires || 0}
-            icon="calendar-outline"
-            backgroundColor={theme.surfaceVariant}
-            iconColor={theme.textSecondary}
+            title={t('dashboard.netProfit')}
+            value={activeStats.benefice}
+            icon="wallet"
+            backgroundColor={theme.secondaryLight}
+            iconColor={theme.secondary}
           />
         </View>
-      
+
+        {/* Ventes d'hier */}
+<View style={[styles.hierCard, { backgroundColor: theme.surface }]}>
+  <View style={styles.hierRow}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
+      <Text style={{ fontSize: 14, fontWeight: '600', color: theme.textSecondary }}>Ventes d'hier</Text>
+    </View>
+    <View style={{ alignItems: 'flex-end' }}>
+      <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.text }}>
+        {formatMonnaie(dashboard.hier?.chiffreAffaires || 0)}
+      </Text>
+      <Text style={{ fontSize: 12, color: theme.textTertiary }}>
+        {dashboard.hier?.nombreCommandes || 0} commande{dashboard.hier?.nombreCommandes > 1 ? 's' : ''}
+      </Text>
+    </View>
+  </View>
+</View>
+
+        {/* Bénéfices détaillés (jour, semaine, mois, semestre, année) */}
+        <View style={[styles.beneficesCard, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>📊 Bénéfices</Text>
+          <View style={styles.beneficesRow}>
+            <BeneficeItem label="Jour" value={dashboard.jour.beneficeNet} theme={theme} />
+            <BeneficeItem label="Semaine" value={dashboard.semaine.beneficeNet} theme={theme} />
+            <BeneficeItem label="Mois" value={dashboard.mois.beneficeNet} theme={theme} />
+          </View>
+          <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+          <View style={styles.beneficesRow}>
+            <BeneficeItem label="Semestre" value={dashboard.semestre.beneficeNet} theme={theme} />
+            <BeneficeItem label="Année" value={dashboard.annee.beneficeNet} theme={theme} />
+            <BeneficeItem label="Hier" value={dashboard.hier?.beneficeNet || 0} theme={theme} />
+          </View>
+        </View>
+
         {/* Charges du mois */}
-        <ChargesCard totalCharges={dashboard.mois.totalCharges || 0} />
+        <ChargesCard totalCharges={dashboard.mois.totalCharges || 0} details={dashboard.mois.detailsCharges || []} />
 
         {/* Graphique d'évolution */}
         <EvolutionChart data={dashboard.evolutionMensuelle} />
@@ -143,34 +147,44 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
   );
 };
 
+// Petit composant pour un item bénéfice
+const BeneficeItem: React.FC<{ label: string; value: number; theme: any }> = ({ label, value, theme }) => (
+  <View style={{ flex: 1, alignItems: 'center' }}>
+    <Text style={{ fontSize: 11, color: theme.textSecondary, marginBottom: 4 }}>{label}</Text>
+    <Text style={{ fontSize: 14, fontWeight: '700', color: value >= 0 ? theme.secondary : theme.danger }}>
+      {formatMonnaie(value)}
+    </Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { fontSize: 16, textAlign: 'center', paddingHorizontal: 20 },
   scroll: { flex: 1 },
-  kpiRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginTop: 16,
+  kpiRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 12, marginTop: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
+  beneficesCard: {
+    marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  kpiCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  kpiLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
+  beneficesRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8 },
+  divider: { height: 1, marginVertical: 4 },
+  hierCard: {
+  marginHorizontal: 16,
+  marginTop: 12,
+  padding: 14,
+  borderRadius: 12,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.03,
+  shadowRadius: 3,
+  elevation: 1,
+},
+hierRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
 });
