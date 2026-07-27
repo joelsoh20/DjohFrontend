@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, FlatList, ScrollView, Text, TouchableOpacity, TextInput, StyleSheet, Alert, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, ScrollView, Text, TouchableOpacity, TextInput, StyleSheet, Alert, Modal, BackHandler } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -29,6 +29,23 @@ export const ServicesLivraisonScreen: React.FC = () => {
   const [loadingCreate, setLoadingCreate] = useState(false);
 const [loadingStock, setLoadingStock] = useState(false);
 const [loadingDelete, setLoadingDelete] = useState(false);
+
+useEffect(() => {
+  const backAction = () => {
+    if (showStock) {
+      setShowStock(false);
+      return true;
+    }
+    if (showAdd) {
+      setShowAdd(false);
+      return true;
+    }
+    return false;
+  };
+
+  const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+  return () => backHandler.remove();
+}, [showStock, showAdd]);
 
   const charger = async () => {
     try {
@@ -183,7 +200,8 @@ const handleDelete = async (id: string, nom: string) => {
         ListEmptyComponent={<Text style={{ color: theme.textTertiary, textAlign: 'center', marginTop: 40 }}>Aucun service</Text>}
       />
 
-      <Modal visible={showAdd} transparent animationType="slide">
+      <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
+
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Nouveau service</Text>
@@ -198,7 +216,7 @@ const handleDelete = async (id: string, nom: string) => {
         </View>
       </Modal>
 
-      <Modal visible={showStock} transparent animationType="slide">
+      <Modal visible={showStock} transparent animationType="slide" onRequestClose={() => setShowStock(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Stock - {selectedService?.nom}</Text>
@@ -215,7 +233,7 @@ const handleDelete = async (id: string, nom: string) => {
             </ScrollView>
             <TextInput style={[styles.input, { backgroundColor: theme.surfaceVariant, color: theme.text }]} placeholder="Quantité" keyboardType="numeric" value={quantite} onChangeText={setQuantite} />
             <View style={styles.modalBtns}>
-              <Button title="Créer" onPress={handleCreate} loading={loadingCreate} disabled={loadingCreate} />
+              <Button title="Fermer" onPress={() => setShowStock(false)} variant="outline" />
               <Button title="Ajouter" onPress={handleAjouterStock} loading={loadingStock} disabled={loadingStock} />
             </View>
           </View>

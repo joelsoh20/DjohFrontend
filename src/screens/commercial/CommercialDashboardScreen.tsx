@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, ScrollView, Text, StyleSheet,
-  RefreshControl, TouchableOpacity,
+  RefreshControl, TouchableOpacity, Modal, TextInput, Alert, Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -9,9 +9,225 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCommercialDashboard } from '../../hooks/useCommercialDashboard';
 import { CommercialStatsCard } from '../../components/commercial/CommercialStatsCard';
-import { CommercialCommandesList } from '../../components/commercial/CommercialCommandesList';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import api from '../../services/api';
+import { formatMonnaie } from '../../utils/formatMonnaie';
+import { formatDateCourte } from '../../utils/formatDate';
 
+// ---------- Fonctions d'appel et WhatsApp ----------
+const handleCall = (phoneNumber: string | null) => {
+  if (phoneNumber) Linking.openURL(`tel:${phoneNumber}`).catch(() => {});
+};
+
+const handleWhatsApp = (phoneNumber: string | null) => {
+  if (phoneNumber) {
+    let formatted = phoneNumber.replace(/\s/g, '');
+    if (formatted.startsWith('0')) formatted = '237' + formatted.substring(1);
+    if (!formatted.startsWith('237') && !formatted.startsWith('+')) formatted = '237' + formatted;
+    formatted = formatted.replace('+', '');
+    Linking.openURL(`whatsapp://send?phone=${formatted}`).catch(() => {
+      Linking.openURL(`https://wa.me/${formatted}`);
+    });
+  }
+};
+
+// Composant simple pour afficher une commande avec commentaires et modification
+const CommandeItem: React.FC<{
+  commande: any;
+  onModifier: (commande: any) => void;
+  theme: any;
+}> = ({ commande, onModifier, theme }) => {
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
+
+  const fetchComments = useCallback(async () => {
+    if (!commande?.id) return;
+    setLoadingComments(true);
+    try {
+      const res = await api.get(`/order-comments/${commande.id}`);
+      if (res.data?.success) setComments(res.data.data);
+    } catch { /* ignore */ }
+    finally { setLoadingComments(false); }
+  }, [commande?.id]);
+
+  useEffect(() => {
+    if (showComments) fetchComments();
+  }, [showComments]);
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    try {
+      await api.post('/order-comments', {
+        order_id: commande.id,
+        message: newComment.trim()
+      });
+      setNewComment('');
+      fetchComments();
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Impossible d\'envoyer le commentaire');
+    }
+  };
+
+  const isRecue = commande.statut === 'recue';
+
+  return (
+    <View style={[itemStyles.card, { backgroundColor: theme.surface }]}>
+      <View style={itemStyles.header}>
+        <View>
+          <Text style={[itemStyles.client, { color: theme.text }]}>👤 {commande.client_nom}</Text>
+          <Text style={[itemStyles.date, { color: theme.textSecondary }]}>
+            {formatDateCourte(commande.date_creation)}
+          </Text>
+        </View>
+        <View style={[itemStyles.badge, { backgroundColor: isRecue ? theme.warningLight : theme.secondaryLight }]}>
+          <Text style={[itemStyles.badgeText, { color: isRecue ? theme.warning : theme.secondary }]}>
+            {isRecue ? 'En attente' : 'Livrée'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Téléphone et boutons d'appel */}
+      <View style={itemStyles.phoneContainer}>
+        <Ionicons name="call-outline" size={16} color={theme.primary} />
+        <Text style={[itemStyles.phoneText, { color: theme.textSecondary }]}>
+          {commande.client_telephone || '📵 Numéro non renseigné'}
+        </Text>
+        {commande.client_telephone && (
+          <View style={itemStyles.actionButtons}>
+            <TouchableOpacity
+              style={[itemStyles.callButton, { backgroundColor: theme.primary }]}
+              onPress={() => handleCall(commande.client_telephone)}
+            >
+              <Ionicons name="call" size={14} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[itemStyles.whatsappButton, { backgroundColor: '#25D366' }]}
+              onPress={() => handleWhatsApp(commande.client_telephone)}
+            >
+              <Ionicons name="logo-whatsapp" size={16} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      <Text style={[itemStyles.produits, { color: theme.textSecondary }]}>
+        📦 {(commande as any).produit_nom || (commande as any).produits?.join(', ') || 'N/A'}
+      </Text>
+      <Text style={[itemStyles.total, { color: theme.text }]}>
+        Total : {formatMonnaie(commande.total || 0)}
+      </Text>
+
+      {/* Actions */}
+      <View style={itemStyles.actions}>
+        {isRecue && (
+          <TouchableOpacity
+            style={[itemStyles.actionBtn, { borderColor: theme.primary }]}
+            onPress={() => onModifier(commande)}
+          >
+            <Ionicons name="create-outline" size={16} color={theme.primary} />
+            <Text style={[itemStyles.actionText, { color: theme.primary }]}>Modifier</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[itemStyles.actionBtn, { borderColor: theme.primary }]}
+          onPress={() => setShowComments(true)}
+        >
+          <Ionicons name="chatbubble-outline" size={16} color={theme.primary} />
+          <Text style={[itemStyles.actionText, { color: theme.primary }]}>Commentaires</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Modal commentaires */}
+      <Modal visible={showComments} animationType="slide" transparent onRequestClose={() => setShowComments(false)}>
+        <View style={itemStyles.modalOverlay}>
+          <View style={[itemStyles.modalContent, { backgroundColor: theme.surface }]}>
+            <Text style={[itemStyles.modalTitle, { color: theme.text }]}>💬 Commentaires</Text>
+
+            <ScrollView style={{ maxHeight: 300 }}>
+              {comments.length === 0 && !loadingComments && (
+                <Text style={{ color: theme.textSecondary, textAlign: 'center', marginVertical: 20 }}>
+                  Aucun commentaire
+                </Text>
+              )}
+              {comments.map(c => (
+                <View key={c.id} style={[itemStyles.comment, { borderBottomColor: theme.divider }]}>
+                  <Text style={[itemStyles.commentUser, { color: theme.primary }]}>
+                    {c.User?.nom} ({c.User?.role})
+                  </Text>
+                  <Text style={{ color: theme.text }}>{c.message}</Text>
+                  <Text style={[itemStyles.commentDate, { color: theme.textTertiary }]}>
+                    {formatDateCourte(c.date_creation)}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={itemStyles.commentInputRow}>
+              <TextInput
+                style={[itemStyles.input, { backgroundColor: theme.surfaceVariant, color: theme.text, borderColor: theme.border }]}
+                placeholder="Ajouter un commentaire..."
+                placeholderTextColor={theme.textTertiary}
+                value={newComment}
+                onChangeText={setNewComment}
+                multiline
+              />
+              <TouchableOpacity style={[itemStyles.sendBtn, { backgroundColor: theme.primary }]} onPress={handleAddComment}>
+                <Ionicons name="send" size={18} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[itemStyles.closeBtn, { borderColor: theme.border }]}
+              onPress={() => setShowComments(false)}
+            >
+              <Text style={{ color: theme.textSecondary }}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const itemStyles = StyleSheet.create({
+  card: { padding: 14, borderRadius: 12, marginBottom: 10 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+  client: { fontSize: 15, fontWeight: '600' },
+  date: { fontSize: 12, marginTop: 2 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  badgeText: { fontSize: 11, fontWeight: '600' },
+  phoneContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
+  phoneText: { fontSize: 14, flex: 1 },
+  actionButtons: { flexDirection: 'row', gap: 6 },
+  callButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  whatsappButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  produits: { fontSize: 13, marginBottom: 4 },
+  total: { fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
+  actions: { flexDirection: 'row', gap: 8 },
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10
+  },
+  actionText: { fontSize: 13, fontWeight: '600' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: {
+    padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%'
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
+  comment: { paddingVertical: 8, borderBottomWidth: 1 },
+  commentUser: { fontSize: 13, fontWeight: '600' },
+  commentDate: { fontSize: 11, marginTop: 2 },
+  commentInputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 },
+  input: { flex: 1, borderWidth: 1, borderRadius: 10, padding: 10, fontSize: 14, maxHeight: 80 },
+  sendBtn: { padding: 10, borderRadius: 10 },
+  closeBtn: { alignSelf: 'center', marginTop: 12, paddingVertical: 8, paddingHorizontal: 20, borderRadius: 8, borderWidth: 1 },
+});
+
+// ==============================
+// ÉCRAN PRINCIPAL
+// ==============================
 export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
   const { theme, isDark, toggleTheme } = useTheme();
@@ -22,6 +238,13 @@ export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navig
     const unsubscribe = navigation.addListener('focus', () => refresh());
     return unsubscribe;
   }, [navigation, refresh]);
+
+  const handleModifier = (commande: any) => {
+  navigation.navigate('Commande', {
+    screen: 'NouvelleCommande',
+    params: { commande }
+  });
+};
 
   if (loading) {
     return (
@@ -56,7 +279,25 @@ export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navig
         showsVerticalScrollIndicator={false}
       >
         <CommercialStatsCard stats={stats} />
-        <CommercialCommandesList commandes={stats.dernieresCommandes || []} />
+
+        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>📝 Mes commandes récentes</Text>
+          {stats.dernieresCommandes?.length > 0 ? (
+            stats.dernieresCommandes.map((cmd: any, idx: number) => (
+              <CommandeItem
+                key={cmd.id || idx}
+                commande={cmd}
+                onModifier={handleModifier}
+                theme={theme}
+              />
+            ))
+          ) : (
+            <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 20 }}>
+              Aucune commande récente
+            </Text>
+          )}
+        </View>
+
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -83,6 +324,7 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', gap: 10 },
   headerBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
   fab: {
     position: 'absolute', bottom: 24, right: 24,
     width: 60, height: 60, borderRadius: 30,

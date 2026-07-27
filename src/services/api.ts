@@ -7,10 +7,10 @@ import * as SecureStore from 'expo-secure-store';
 const getBaseUrl = (): string => {
   if (__DEV__) {
     // Pendant le développement, on utilise aussi le backend Render
-    return 'http://192.168.6.120:5000/api'; //  192.168.6.180 OU 192.168.1.148, 192.168.43.112 ou 192.168.56.1 lorque je suis hors reseau ← Remplacez par votre IP
+    return 'http://192.168.6.158:5000/api'; //  192.168.6.180 OU 192.168.1.148, 192.168.43.112 ou 192.168.56.1 lorque je suis hors reseau ← Remplacez par votre IP
   }
   // En production
-  return 'https://votre-domaine.com/api'; // backenddjoh-1.onrender.com
+  return 'https://backenddjoh-1.onrender/api';
 };
 
 // const getBaseUrl = (): string => {

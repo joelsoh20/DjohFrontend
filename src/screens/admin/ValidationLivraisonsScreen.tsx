@@ -1,5 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, FlatList, TouchableOpacity, Text, TextInput, StyleSheet, RefreshControl, Alert, Modal } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import {
+  View, FlatList, TouchableOpacity, Text, TextInput, StyleSheet,
+  RefreshControl, Alert, Modal, ScrollView
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,8 +14,116 @@ import { EmptyValidation } from '../../components/validation/EmptyValidation';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { Button } from '../../components/Button';
 import { serviceLivraisonService } from '../../services/serviceLivraisonService';
+import api from '../../services/api';
 import { formatMonnaie } from '../../utils/formatMonnaie';
+import { formatDateCourte } from '../../utils/formatDate';
 
+// ---------- Modal Commentaires ----------
+interface Comment {
+  id: string;
+  message: string;
+  date_creation: string;
+  User?: { id: string; nom: string; role: string };
+}
+
+const CommentairesModal: React.FC<{
+  visible: boolean;
+  onClose: () => void;
+  orderId: string;
+  theme: any;
+}> = ({ visible, onClose, orderId, theme }) => {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newMsg, setNewMsg] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
+
+  const fetchComments = useCallback(async () => {
+    if (!orderId) return;
+    setLoadingComments(true);
+    try {
+      const res = await api.get(`/order-comments/${orderId}`);
+      if (res.data?.success) setComments(res.data.data);
+    } catch { /* ignore */ }
+    finally { setLoadingComments(false); }
+  }, [orderId]);
+
+  useEffect(() => {
+    if (visible) fetchComments();
+  }, [visible]);
+
+  const handleAdd = async () => {
+    const msg = newMsg.trim();
+    if (!msg) return;
+    try {
+      await api.post('/order-comments', { order_id: orderId, message: msg });
+      setNewMsg('');
+      fetchComments();
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || "Impossible d'envoyer le commentaire");
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={cmStyles.overlay}>
+        <View style={[cmStyles.content, { backgroundColor: theme.surface }]}>
+          <Text style={[cmStyles.title, { color: theme.text }]}>💬 Commentaires</Text>
+
+          <ScrollView style={{ maxHeight: 250 }}>
+            {comments.length === 0 && !loadingComments && (
+              <Text style={{ color: theme.textSecondary, textAlign: 'center', marginVertical: 20 }}>
+                Aucun commentaire
+              </Text>
+            )}
+            {comments.map(c => (
+              <View key={c.id} style={[cmStyles.comment, { borderBottomColor: theme.divider }]}>
+                <Text style={{ fontWeight: '600', color: theme.primary }}>
+                  {c.User?.nom || 'Inconnu'} ({c.User?.role || '-'})
+                </Text>
+                <Text style={{ color: theme.text, marginVertical: 2 }}>{c.message}</Text>
+                <Text style={{ fontSize: 11, color: theme.textTertiary }}>
+                  {formatDateCourte(c.date_creation)}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={cmStyles.inputRow}>
+            <TextInput
+              style={[cmStyles.input, { backgroundColor: theme.surfaceVariant, color: theme.text, borderColor: theme.border }]}
+              placeholder="Votre message..."
+              placeholderTextColor={theme.textTertiary}
+              value={newMsg}
+              onChangeText={setNewMsg}
+              multiline
+            />
+            <TouchableOpacity style={[cmStyles.sendBtn, { backgroundColor: theme.primary }]} onPress={handleAdd}>
+              <Ionicons name="send" size={16} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={[cmStyles.closeBtn, { borderColor: theme.border }]} onPress={onClose}>
+            <Text style={{ color: theme.textSecondary }}>Fermer</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const cmStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  content: { padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' },
+  title: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  comment: { paddingVertical: 8, borderBottomWidth: 1 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 },
+  input: { flex: 1, borderWidth: 1, borderRadius: 10, padding: 10, fontSize: 14, maxHeight: 80 },
+  sendBtn: { padding: 10, borderRadius: 10 },
+  closeBtn: { alignSelf: 'center', marginTop: 12, paddingVertical: 8, paddingHorizontal: 20, borderRadius: 8, borderWidth: 1 },
+});
+
+// ==============================
+// ÉCRAN PRINCIPAL
+// ==============================
 export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -23,7 +134,6 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
     searchText, setSearchText, commandesFiltrees,
   } = useCommandes({ statut: 'recue', limit: 100 });
 
-  const { refresh } = useCommandes({ statut: 'recue', limit: 100 });
   const [selectedGroupe, setSelectedGroupe] = useState<any>(null);
   const [showValidation, setShowValidation] = useState(false);
   const [fraisChoisi, setFraisChoisi] = useState(1000);
@@ -32,6 +142,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
   const [groupeToAnnuler, setGroupeToAnnuler] = useState<any>(null);
   const [motifAnnulation, setMotifAnnulation] = useState('');
   const [traitees, setTraitees] = useState<Set<string>>(new Set());
+  const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem('traitees').then(data => {
@@ -39,15 +150,15 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
     });
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => onRefresh(), 5000);
-    return () => clearInterval(interval);
-  }, [onRefresh]);
+  // Refresh auto supprimé → uniquement refresh manuel (pull-to-refresh)
 
+  // Refresh au focus uniquement si pas déjà en chargement
   React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => refresh());
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (!loading) onRefresh();
+    });
     return unsubscribe;
-  }, [navigation, refresh]);
+  }, [navigation, onRefresh, loading]);
 
   const commandesGroupees = useMemo(() => {
     const groupeMap = new Map<string, any>();
@@ -65,6 +176,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
           produits: [],
           total: 0,
           commandes: [],
+          firstId: cmd.id,
         });
       }
       const groupe = groupeMap.get(key);
@@ -171,6 +283,17 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
                 <Text style={[styles.totalValue, { color: theme.text }]}>{formatMonnaie(item.total)}</Text>
               </View>
               <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+
+              {/* Bouton Commentaires */}
+              <TouchableOpacity
+                style={[styles.commentBtn, { borderColor: theme.primary }]}
+                onPress={() => setShowCommentsFor(item.firstId)}
+              >
+                <Ionicons name="chatbubble-outline" size={16} color={theme.primary} />
+                <Text style={[styles.commentBtnText, { color: theme.primary }]}>💬 Voir les commentaires</Text>
+              </TouchableOpacity>
+
+              <View style={[styles.divider, { backgroundColor: theme.divider }]} />
               <View style={styles.actions}>
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.copyBtn, {
@@ -200,6 +323,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
         contentContainerStyle={commandesGroupees.length === 0 ? styles.emptyContainer : styles.listContent}
       />
 
+      {/* Modal Validation */}
       <Modal visible={showValidation} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
@@ -224,6 +348,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
         </View>
       </Modal>
 
+      {/* Modal Annulation */}
       <Modal visible={showAnnulation} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
@@ -245,6 +370,14 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
           </View>
         </View>
       </Modal>
+
+      {/* Modal Commentaires */}
+      <CommentairesModal
+        visible={!!showCommentsFor}
+        onClose={() => setShowCommentsFor(null)}
+        orderId={showCommentsFor || ''}
+        theme={theme}
+      />
     </View>
   );
 };
@@ -268,6 +401,11 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { fontSize: 14, fontWeight: '600' },
   totalValue: { fontSize: 18, fontWeight: 'bold' },
+  commentBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: 8, borderWidth: 1.5
+  },
+  commentBtnText: { fontSize: 13, fontWeight: '600' },
   actions: { flexDirection: 'row', gap: 8 },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 10, borderRadius: 8, borderWidth: 1.5 },
   copyBtn: { flex: 0.8 },

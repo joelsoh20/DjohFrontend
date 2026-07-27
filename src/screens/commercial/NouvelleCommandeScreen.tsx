@@ -7,14 +7,15 @@ import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import { CommandeFormSkeleton } from '../../components/commande/CommandeFormSkeleton';
 
-export const NouvelleCommandeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const NouvelleCommandeScreen: React.FC<{ navigation: any; route?: any }> = ({ navigation, route }) => {
   const { theme } = useTheme();
+  const commandeToEdit = route?.params?.commande || undefined;
 
   const {
     formData, produits, produitsSelectionnes,
-    loadingData, loadingSubmit,
+    loadingData, loadingSubmit, isEditMode,
     updateField, toggleProduit, updateQuantite, handleSubmit,
-  } = useNouvelleCommande();
+  } = useNouvelleCommande(commandeToEdit);
 
   const produitsActifs = produits.filter(p => p.actif);
   const totalProduits = produitsSelectionnes.reduce((sum, p) => sum + p.prix * p.quantite, 0);
@@ -23,8 +24,10 @@ export const NouvelleCommandeScreen: React.FC<{ navigation: any }> = ({ navigati
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.header}>
-          <Ionicons name="add-circle" size={32} color={theme.primary} />
-          <Text style={[styles.title, { color: theme.text }]}>Nouvelle commande</Text>
+          <Ionicons name={isEditMode ? 'create' : 'add-circle'} size={32} color={theme.primary} />
+          <Text style={[styles.title, { color: theme.text }]}>
+            {isEditMode ? 'Modifier la commande' : 'Nouvelle commande'}
+          </Text>
         </View>
         <CommandeFormSkeleton />
       </View>
@@ -39,8 +42,10 @@ export const NouvelleCommandeScreen: React.FC<{ navigation: any }> = ({ navigati
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Ionicons name="add-circle" size={32} color={theme.primary} />
-        <Text style={[styles.title, { color: theme.text }]}>Nouvelle commande</Text>
+        <Ionicons name={isEditMode ? 'create' : 'add-circle'} size={32} color={theme.primary} />
+        <Text style={[styles.title, { color: theme.text }]}>
+          {isEditMode ? 'Modifier la commande' : 'Nouvelle commande'}
+        </Text>
       </View>
 
       <View style={[styles.clientBadge, { backgroundColor: theme.secondaryLight }]}>
@@ -91,7 +96,12 @@ export const NouvelleCommandeScreen: React.FC<{ navigation: any }> = ({ navigati
         </View>
       )}
 
-      <Button title="Enregistrer" onPress={handleSubmit} loading={loadingSubmit} style={styles.saveButton} />
+      <Button
+        title={isEditMode ? 'Modifier' : 'Enregistrer'}
+        onPress={handleSubmit}
+        loading={loadingSubmit}
+        style={styles.saveButton}
+      />
       <View style={{ height: 40 }} />
     </ScrollView>
   );

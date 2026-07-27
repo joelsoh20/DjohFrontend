@@ -21,14 +21,18 @@ export const commandeService = {
     return response.data;
   },
 
- updateStatut: async (id: string, statut: string, frais_livraison?: number, service_livraison_id?: string, motif?: string) => {
-  const response = await api.patch(`/commandes/${id}/statut`, { statut, frais_livraison, service_livraison_id, motif });
-  return response.data;
-},
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/commandes/${id}`, data);
+    return response.data;
+  },
 
-getMonDashboard: async () => {
-  const response = await api.get('/commandes/mon-dashboard');
-  return response.data;
-},
+  updateStatut: async (id: string, statut: string, frais_livraison?: number, service_livraison_id?: string, motif?: string) => {
+    const response = await api.patch(`/commandes/${id}/statut`, { statut, frais_livraison, service_livraison_id, motif });
+    return response.data;
+  },
 
+  getMonDashboard: async () => {
+    const response = await api.get('/commandes/mon-dashboard');
+    return response.data;
+  },
 };

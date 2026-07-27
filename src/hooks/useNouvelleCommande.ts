@@ -12,6 +12,16 @@ interface ProduitSelectionne {
   quantite: number;
 }
 
+interface CommandeToEdit {
+  id: string;
+  client_telephone?: string;
+  client_quartier?: string;
+  prix_unitaire_reel?: number;
+  product_id?: string;
+  quantite?: number;
+  produit?: { id: string; nom: string; prix_catalogue?: number };
+}
+
 interface UseNouvelleCommandeReturn {
   formData: {
     client_telephone: string;
@@ -22,6 +32,7 @@ interface UseNouvelleCommandeReturn {
   produitsSelectionnes: ProduitSelectionne[];
   loadingData: boolean;
   loadingSubmit: boolean;
+  isEditMode: boolean;
   updateField: (field: string, value: string) => void;
   toggleProduit: (productId: string, nom: string, prix: number) => void;
   updateQuantite: (productId: string, quantite: number) => void;
@@ -35,8 +46,9 @@ const INITIAL_FORM = {
   prix: '',
 };
 
-export const useNouvelleCommande = (): UseNouvelleCommandeReturn => {
+export const useNouvelleCommande = (commandeToEdit?: CommandeToEdit): UseNouvelleCommandeReturn => {
   const { utilisateur } = useAuth();
+  const isEditMode = !!commandeToEdit;
 
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [produits, setProduits] = useState<Produit[]>([]);
@@ -44,12 +56,34 @@ export const useNouvelleCommande = (): UseNouvelleCommandeReturn => {
   const [loadingData, setLoadingData] = useState(true);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
 
+  // Chargement des produits + pré-remplissage si mode édition
   useEffect(() => {
     const charger = async () => {
       try {
         const res = await produitService.getAll();
-        if (res.success && res.data) {
-          setProduits(Array.isArray(res.data) ? res.data : []);
+        const produitsList: Produit[] = res.success && res.data
+          ? (Array.isArray(res.data) ? res.data : [])
+          : [];
+        setProduits(produitsList);
+
+        // Pré-remplissage si mode édition
+        if (commandeToEdit) {
+          setFormData({
+            client_telephone: commandeToEdit.client_telephone || '',
+            client_quartier: commandeToEdit.client_quartier || '',
+            prix: commandeToEdit.prix_unitaire_reel?.toString() || '',
+          });
+
+          if (commandeToEdit.product_id && commandeToEdit.produit) {
+            const produitTrouve = produitsList.find(p => p.id === commandeToEdit.product_id);
+            const prix = produitTrouve?.prix_catalogue || commandeToEdit.produit.prix_catalogue || 0;
+            setProduitsSelectionnes([{
+              product_id: commandeToEdit.product_id,
+              nom: commandeToEdit.produit.nom || '',
+              prix,
+              quantite: commandeToEdit.quantite || 1,
+            }]);
+          }
         }
       } catch (err) {
         console.error('Erreur chargement produits:', err);
@@ -94,27 +128,44 @@ export const useNouvelleCommande = (): UseNouvelleCommandeReturn => {
 
     setLoadingSubmit(true);
     try {
-      await commandeService.creer({
-        client_nom: 'NDJOH AGOGO',
-        client_telephone: formData.client_telephone.trim() || null,
-        client_quartier: formData.client_quartier.trim() || null,
-        prix_total: prixSaisi,
-        lignes: produitsSelectionnes.map(p => ({
-          product_id: p.product_id,
-          quantite: p.quantite,
-          prix_unitaire_reel: p.prix,
-        })),
-      });
+      if (isEditMode && commandeToEdit) {
+        // Mode édition : mise à jour
+        const ligne = produitsSelectionnes[0];
+        await commandeService.update(commandeToEdit.id, {
+          client_telephone: formData.client_telephone.trim() || null,
+          client_quartier: formData.client_quartier.trim() || null,
+          product_id: ligne.product_id,
+          quantite: ligne.quantite,
+          prix_unitaire_reel: prixSaisi,
+        });
 
-      Alert.alert('Succès', 'Commande enregistrée !', [
-        { text: 'OK', onPress: () => resetForm() }
-      ]);
+        Alert.alert('Succès', 'Commande modifiée !', [
+          { text: 'OK', onPress: () => resetForm() }
+        ]);
+      } else {
+        // Mode création
+        await commandeService.creer({
+          client_nom: 'NDJOH AGOGO',
+          client_telephone: formData.client_telephone.trim() || null,
+          client_quartier: formData.client_quartier.trim() || null,
+          prix_total: prixSaisi,
+          lignes: produitsSelectionnes.map(p => ({
+            product_id: p.product_id,
+            quantite: p.quantite,
+            prix_unitaire_reel: p.prix,
+          })),
+        });
+
+        Alert.alert('Succès', 'Commande enregistrée !', [
+          { text: 'OK', onPress: () => resetForm() }
+        ]);
+      }
     } catch (err: any) {
       Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
     } finally {
       setLoadingSubmit(false);
     }
-  }, [formData, produitsSelectionnes]);
+  }, [formData, produitsSelectionnes, isEditMode, commandeToEdit]);
 
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM);
@@ -123,7 +174,7 @@ export const useNouvelleCommande = (): UseNouvelleCommandeReturn => {
 
   return {
     formData, produits, produitsSelectionnes,
-    loadingData, loadingSubmit,
+    loadingData, loadingSubmit, isEditMode,
     updateField, toggleProduit, updateQuantite,
     handleSubmit, resetForm,
   };
