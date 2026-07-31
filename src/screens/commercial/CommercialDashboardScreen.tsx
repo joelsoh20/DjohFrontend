@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, ScrollView, Text, StyleSheet,
   RefreshControl, TouchableOpacity, Modal, TextInput, Alert, Linking
@@ -12,7 +12,7 @@ import { CommercialStatsCard } from '../../components/commercial/CommercialStats
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import api from '../../services/api';
 import { formatMonnaie } from '../../utils/formatMonnaie';
-import { formatDateCourte } from '../../utils/formatDate';
+import { formatDateHeure } from '../../utils/formatDate';
 
 // ---------- Fonctions d'appel et WhatsApp ----------
 const handleCall = (phoneNumber: string | null) => {
@@ -41,16 +41,29 @@ const CommandeItem: React.FC<{
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [dernierCommentaire, setDernierCommentaire] = useState<any>(null);
 
   const fetchComments = useCallback(async () => {
     if (!commande?.id) return;
     setLoadingComments(true);
     try {
       const res = await api.get(`/order-comments/${commande.id}`);
-      if (res.data?.success) setComments(res.data.data);
+      if (res.data?.success) {
+        const data = res.data.data || [];
+        setComments(data);
+        // ✅ Dernier commentaire
+        if (data.length > 0) {
+          setDernierCommentaire(data[data.length - 1]);
+        }
+      }
     } catch { /* ignore */ }
     finally { setLoadingComments(false); }
   }, [commande?.id]);
+
+  // ✅ Charger les commentaires automatiquement au montage
+  useEffect(() => {
+    fetchComments();
+  }, []);
 
   useEffect(() => {
     if (showComments) fetchComments();
@@ -78,7 +91,7 @@ const CommandeItem: React.FC<{
         <View>
           <Text style={[itemStyles.client, { color: theme.text }]}>👤 {commande.client_nom}</Text>
           <Text style={[itemStyles.date, { color: theme.textSecondary }]}>
-            {formatDateCourte(commande.date_creation)}
+            {formatDateHeure(commande.date_creation)}
           </Text>
         </View>
         <View style={[itemStyles.badge, { backgroundColor: isRecue ? theme.warningLight : theme.secondaryLight }]}>
@@ -119,6 +132,24 @@ const CommandeItem: React.FC<{
         Total : {formatMonnaie(commande.total || 0)}
       </Text>
 
+      {/* ✅ Dernier commentaire affiché directement */}
+      {dernierCommentaire && (
+        <View style={[itemStyles.dernierCommentaire, { backgroundColor: theme.primaryLight }]}>
+          <View style={itemStyles.dernierCommentaireHeader}>
+            <Ionicons name="chatbubble" size={14} color={theme.primary} />
+            <Text style={[itemStyles.dernierCommentaireAuteur, { color: theme.primary }]}>
+              {dernierCommentaire.User?.nom || 'Inconnu'} ({dernierCommentaire.User?.role || '-'})
+            </Text>
+            <Text style={[itemStyles.dernierCommentaireDate, { color: theme.textTertiary }]}>
+              {formatDateHeure(dernierCommentaire.date_creation)}
+            </Text>
+          </View>
+          <Text style={[itemStyles.dernierCommentaireTexte, { color: theme.text }]} numberOfLines={2}>
+            {dernierCommentaire.message}
+          </Text>
+        </View>
+      )}
+
       {/* Actions */}
       <View style={itemStyles.actions}>
         {isRecue && (
@@ -135,7 +166,9 @@ const CommandeItem: React.FC<{
           onPress={() => setShowComments(true)}
         >
           <Ionicons name="chatbubble-outline" size={16} color={theme.primary} />
-          <Text style={[itemStyles.actionText, { color: theme.primary }]}>Commentaires</Text>
+          <Text style={[itemStyles.actionText, { color: theme.primary }]}>
+            Commentaires {comments.length > 0 ? `(${comments.length})` : ''}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -157,8 +190,8 @@ const CommandeItem: React.FC<{
                     {c.User?.nom} ({c.User?.role})
                   </Text>
                   <Text style={{ color: theme.text }}>{c.message}</Text>
-                  <Text style={[itemStyles.commentDate, { color: theme.textTertiary }]}>
-                    {formatDateCourte(c.date_creation)}
+                  <Text style={[itemStyles.date, { color: theme.textSecondary }]}>
+                    {formatDateHeure(c.date_creation)}
                   </Text>
                 </View>
               ))}
@@ -205,6 +238,12 @@ const itemStyles = StyleSheet.create({
   whatsappButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   produits: { fontSize: 13, marginBottom: 4 },
   total: { fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
+  // ✅ Nouveaux styles pour le dernier commentaire
+  dernierCommentaire: { padding: 10, borderRadius: 8, marginBottom: 8 },
+  dernierCommentaireHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  dernierCommentaireAuteur: { fontSize: 12, fontWeight: '600' },
+  dernierCommentaireDate: { fontSize: 10, marginLeft: 'auto' },
+  dernierCommentaireTexte: { fontSize: 13, lineHeight: 18 },
   actions: { flexDirection: 'row', gap: 8 },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -226,7 +265,7 @@ const itemStyles = StyleSheet.create({
 });
 
 // ==============================
-// ÉCRAN PRINCIPAL
+// ÉCRAN PRINCIPAL (inchangé)
 // ==============================
 export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
@@ -239,12 +278,20 @@ export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navig
     return unsubscribe;
   }, [navigation, refresh]);
 
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      refresh();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [refresh]);
+
   const handleModifier = (commande: any) => {
-  navigation.navigate('Commande', {
-    screen: 'NouvelleCommande',
-    params: { commande }
-  });
-};
+    navigation.navigate('NouvelleCommande', { commande });
+  };
+
+  const commandesEnAttente = useMemo(() => {
+    return (stats.dernieresCommandes || []).filter((cmd: any) => cmd.statut === 'recue');
+  }, [stats.dernieresCommandes]);
 
   if (loading) {
     return (
@@ -253,7 +300,6 @@ export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navig
       </View>
     );
   }
-
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.divider }]}>
@@ -282,8 +328,17 @@ export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navig
 
         <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>📝 Mes commandes récentes</Text>
-          {stats.dernieresCommandes?.length > 0 ? (
-            stats.dernieresCommandes.map((cmd: any, idx: number) => (
+
+          <TouchableOpacity
+            style={[styles.historyBtn, { borderColor: theme.primary }]}
+            onPress={() => navigation.navigate('ListeCommandes')}
+          >
+            <Ionicons name="time-outline" size={18} color={theme.primary} />
+            <Text style={[styles.historyBtnText, { color: theme.primary }]}>Voir l'historique</Text>
+          </TouchableOpacity>
+
+          {commandesEnAttente.length > 0 ? (
+            commandesEnAttente.map((cmd: any, idx: number) => (
               <CommandeItem
                 key={cmd.id || idx}
                 commande={cmd}
@@ -293,7 +348,7 @@ export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navig
             ))
           ) : (
             <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 20 }}>
-              Aucune commande récente
+              Aucune commande en attente
             </Text>
           )}
         </View>
@@ -303,7 +358,7 @@ export const CommercialDashboardScreen: React.FC<{ navigation: any }> = ({ navig
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: theme.primary }]}
-        onPress={() => navigation.navigate('Commande', { screen: 'NouvelleCommande' })}
+        onPress={() => navigation.navigate('NouvelleCommande')}
         activeOpacity={0.8}
       >
         <Ionicons name="add" size={30} color="#FFF" />
@@ -325,6 +380,17 @@ const styles = StyleSheet.create({
   headerBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
+  historyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  historyBtnText: { fontSize: 14, fontWeight: '600' },
   fab: {
     position: 'absolute', bottom: 24, right: 24,
     width: 60, height: 60, borderRadius: 30,

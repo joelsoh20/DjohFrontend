@@ -32,7 +32,10 @@ export const commandeService = {
   },
 
   getMonDashboard: async () => {
-    const response = await api.get('/commandes/mon-dashboard');
-    return response.data;
-  },
+  const response = await api.get('/commandes/mon-dashboard', {
+    params: { _t: Date.now() }
+  });
+  return response.data;
+}
+
 };

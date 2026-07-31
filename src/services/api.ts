@@ -7,10 +7,10 @@ import * as SecureStore from 'expo-secure-store';
 const getBaseUrl = (): string => {
   if (__DEV__) {
     // Pendant le développement, on utilise aussi le backend Render
-    return 'http://192.168.6.158:5000/api'; //  192.168.6.180 OU 192.168.1.148, 192.168.43.112 ou 192.168.56.1 lorque je suis hors reseau ← Remplacez par votre IP
+    return 'http://192.168.6.174:5000/api'; //  192.168.6.180 OU 192.168.1.148, 192.168.43.112 ou 192.168.56.1 lorque je suis hors reseau ← Remplacez par votre IP
   }
   // En production
-  return 'https://backenddjoh-1.onrender/api';
+  return 'https://backenddjoh-1.onrender.com/api';
 };
 
 // const getBaseUrl = (): string => {
@@ -33,6 +33,14 @@ api.interceptors.request.use(async (config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
+  // ✅ Désactiver le cache pour toutes les requêtes GET
+  if (config.method?.toLowerCase() === 'get') {
+    config.params = {
+      ...config.params,
+      _t: Date.now()
+    };
+  }
+
   return config;
 });
 
@@ -47,6 +55,5 @@ api.interceptors.response.use(
 
     return Promise.reject(error);
   }
-);
-
+  );
 export default api;

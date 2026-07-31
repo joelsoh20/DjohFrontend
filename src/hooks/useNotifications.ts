@@ -13,18 +13,20 @@ export const useNotifications = () => {
 
     const setup = async () => {
   try {
-    console.log('Demande permission...');
+    console.log('📱 Demande permission...');
     const granted = await notificationService.requestPermission();
-    console.log('Permission:', granted);
+    console.log('📱 Permission:', granted);
+    
     if (granted) {
-      console.log('Récupération token...');
+      console.log('📱 Récupération token...');
       const token = await notificationService.getExpoPushToken();
-      console.log('Token obtenu:', token);
+      console.log('📱 Token obtenu:', token);
       await notificationService.registerToken(token);
-      console.log('Token enregistré sur le backend');
+    } else {
+      console.log('📱 Permission refusée');
     }
   } catch (err: any) {
-    console.log('Erreur setup notifications:', err?.message);
+    console.log('❌ Erreur setup notifications:', err?.message);
   }
 };
 

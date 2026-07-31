@@ -11,6 +11,8 @@ import { ChangePasswordModal } from '../components/profil/ChangePasswordModal';
 import { InfoAppCard } from '../components/profil/InfoAppCard';
 import { Button } from '../components/Button';
 import { Langue, ThemeMode } from '../types';
+import * as Notifications from 'expo-notifications';
+import { notificationService } from '../services/notificationService';
 
 export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
@@ -76,13 +78,23 @@ export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigati
               onSelect: (value: string) => setLangue(value as Langue),
             },
             {
-              type: 'switch',
-              icon: 'notifications',
-              label: t('parametres.notifications'),
-              value: false,
-              color: theme.primary,
-              onToggle: (value: boolean) => console.log('Notifications:', value),
-            },
+  type: 'switch',
+  icon: 'notifications',
+  label: t('parametres.notifications'),
+  value: false,
+  color: theme.primary,
+  onToggle: async (value: boolean) => {
+    if (value) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status === 'granted') {
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId: '29287523-3a5f-413b-8fe1-4326daff789c'
+        });
+        await notificationService.registerToken(tokenData.data);
+      }
+    }
+  }
+},
           ]}
         />
 

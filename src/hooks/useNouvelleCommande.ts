@@ -58,41 +58,54 @@ export const useNouvelleCommande = (commandeToEdit?: CommandeToEdit): UseNouvell
 
   // Chargement des produits + pré-remplissage si mode édition
   useEffect(() => {
-    const charger = async () => {
-      try {
-        const res = await produitService.getAll();
-        const produitsList: Produit[] = res.success && res.data
-          ? (Array.isArray(res.data) ? res.data : [])
-          : [];
-        setProduits(produitsList);
-
-        // Pré-remplissage si mode édition
-        if (commandeToEdit) {
-          setFormData({
-            client_telephone: commandeToEdit.client_telephone || '',
-            client_quartier: commandeToEdit.client_quartier || '',
-            prix: commandeToEdit.prix_unitaire_reel?.toString() || '',
-          });
-
-          if (commandeToEdit.product_id && commandeToEdit.produit) {
-            const produitTrouve = produitsList.find(p => p.id === commandeToEdit.product_id);
-            const prix = produitTrouve?.prix_catalogue || commandeToEdit.produit.prix_catalogue || 0;
-            setProduitsSelectionnes([{
-              product_id: commandeToEdit.product_id,
-              nom: commandeToEdit.produit.nom || '',
-              prix,
-              quantite: commandeToEdit.quantite || 1,
-            }]);
-          }
-        }
-      } catch (err) {
-        console.error('Erreur chargement produits:', err);
-      } finally {
-        setLoadingData(false);
+  const charger = async () => {
+    try {
+      const res = await produitService.getAll();
+      console.log('Réponse produits bruts:', JSON.stringify(res));
+      
+      // Accepter plusieurs formats de réponse
+      let produitsList: Produit[] = [];
+      if (Array.isArray(res)) {
+        produitsList = res;
+      } else if (res?.success && Array.isArray(res.data)) {
+        produitsList = res.data;
+      } else if (res?.data && Array.isArray(res.data)) {
+        produitsList = res.data;
+      } else if (Array.isArray(res?.produits)) {
+        produitsList = res.produits;
       }
-    };
-    charger();
-  }, []);
+      
+      console.log('Produits parsés:', produitsList.length);
+      setProduits(produitsList);
+
+      // Pré-remplissage si mode édition
+      if (commandeToEdit) {
+        setFormData({
+          client_telephone: commandeToEdit.client_telephone || '',
+          client_quartier: commandeToEdit.client_quartier || '',
+          prix: commandeToEdit.prix_unitaire_reel?.toString() || '',
+        });
+
+        if (commandeToEdit.product_id && commandeToEdit.produit) {
+          const produitTrouve = produitsList.find(p => p.id === commandeToEdit.product_id);
+          const prix = produitTrouve?.prix_catalogue || commandeToEdit.produit.prix_catalogue || 0;
+          setProduitsSelectionnes([{
+            product_id: commandeToEdit.product_id,
+            nom: commandeToEdit.produit.nom || '',
+            prix,
+            quantite: commandeToEdit.quantite || 1,
+          }]);
+        }
+      }
+    } catch (err) {
+      console.error('Erreur chargement produits:', err);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+  charger();
+}, []);
+  
 
   const updateField = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

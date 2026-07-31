@@ -119,13 +119,23 @@ export const useCommandes = (options: UseCommandesOptions = {}): UseCommandesRet
   }, [chargerCommandes]);
 
   const commandesFiltrees = useMemo(() => {
-    const search = (searchText || '').toLowerCase().trim();
-    if (!search) return commandes;
-    return commandes.filter(cmd =>
-      (cmd.client_nom || '').toLowerCase().includes(search) ||
-      (cmd.id || '').toLowerCase().includes(search)
+  const search = (searchText || '').toLowerCase().trim();
+  if (!search) return commandes;
+  return commandes.filter(cmd => {
+    const clientNom = (cmd.client_nom || '').toLowerCase();
+    const id = (cmd.id || '').toLowerCase();
+    const telephone = (cmd.client_telephone || '').toLowerCase();
+    const quartier = (cmd.client_quartier || '').toLowerCase();
+    const produitNom = ((cmd as any).produit?.nom || '').toLowerCase();
+    return (
+      clientNom.includes(search) ||
+      id.includes(search) ||
+      telephone.includes(search) ||
+      quartier.includes(search) ||
+      produitNom.includes(search)
     );
-  }, [commandes, searchText]);
+  });
+}, [commandes, searchText]);
 
   return {
     commandes, loading, refreshing, error,

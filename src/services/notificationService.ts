@@ -55,9 +55,14 @@ export const notificationService = {
 
   // Enregistrer le token sur le backend
   registerToken: async (token: string) => {
-    await api.post('/notifications/register', { token });
-  },
-
+  try {
+    console.log('📤 Envoi token au backend:', token);
+    const response = await api.post('/notifications/register', { token });
+    console.log('✅ Token enregistré, réponse:', response.data);
+  } catch (err: any) {
+    console.log('❌ Erreur enregistrement token:', err?.response?.status, err?.response?.data || err?.message);
+  }
+},
   // Envoyer une notification locale
   sendLocal: async (title: string, body: string, data?: any) => {
     await Notifications.scheduleNotificationAsync({

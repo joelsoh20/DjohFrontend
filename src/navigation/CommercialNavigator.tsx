@@ -10,10 +10,12 @@ import { CommercialDashboardScreen } from '../screens/commercial/CommercialDashb
 import { NouvelleCommandeScreen } from '../screens/commercial/NouvelleCommandeScreen';
 import { ProfilParametresScreen } from '../screens/ProfilParametresScreen';
 import { ClassementScreen } from '../screens/ClassementScreen';
+import { ListeCommandesScreen } from '../screens/admin/ListeCommandesScreen'; 
 
 export type CommercialStackParamList = {
   CommercialAccueil: undefined;
   NouvelleCommande: undefined;
+  ListeCommandes: undefined;
 };
 
 const Tab = createBottomTabNavigator();
@@ -32,6 +34,16 @@ const AccueilStackScreen = () => {
         name="CommercialAccueil" 
         component={CommercialDashboardScreen} 
         options={{ title: 'Mon Tableau de Bord' }} 
+      />
+      <Stack.Screen 
+        name="ListeCommandes" 
+        component={ListeCommandesScreen} 
+        options={{ title: 'Historique' }} 
+      />
+      <Stack.Screen 
+        name="NouvelleCommande" 
+        component={NouvelleCommandeScreen} 
+        options={{ title: 'Nouvelle Commande' }} 
       />
     </Stack.Navigator>
   );
