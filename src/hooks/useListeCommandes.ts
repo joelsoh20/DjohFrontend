@@ -110,7 +110,7 @@ export const useListeCommandes = (): UseListeCommandesReturn => {
   return commandes.filter(cmd =>
     (cmd.client_nom || '').toLowerCase().includes(search) ||
     (cmd.id || '').toLowerCase().includes(search) ||
-    (cmd.produit?.nom || '').toLowerCase().includes(search) ||
+    (cmd.lignes || []).some(l => (l.produit?.nom || '').toLowerCase().includes(search)) ||
     (cmd.commercial?.nom || '').toLowerCase().includes(search)
   );
 }, [commandes, filters.searchText]);

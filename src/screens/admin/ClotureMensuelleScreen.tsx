@@ -17,6 +17,8 @@ export const ClotureMensuelleScreen: React.FC = () => {
 
   const {
     dashboard,
+    commissionsMois,
+    totalCommissionsMois,
     loading,
     loadingCloture,
     error,
@@ -98,7 +100,7 @@ export const ClotureMensuelleScreen: React.FC = () => {
         />
 
         {/* Commissions */}
-        <CommissionsClotureCard dashboard={dashboard} />
+        <CommissionsClotureCard commissions={commissionsMois} total={totalCommissionsMois} />
 
         {/* Commandes en attente */}
         {peutCloturer && !moisDejaCloture && (

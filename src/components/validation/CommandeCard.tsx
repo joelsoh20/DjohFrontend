@@ -24,13 +24,16 @@ export const CommandeCard: React.FC<CommandeCardProps> = ({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-  const message = `*NDJOH AGOGO*\n\n*Nature du produit* :\n${(commande as any).produits?.map((p: string) => ` ${p}`).join('\n') || (commande as any).produit?.nom || 'N/A'}\n\n*Numéro du client* :\n${commande.client_telephone || 'N/A'}\n\n*Adresse de livraison*\n${commande.client_quartier || 'N/A'}\n\n*Montant à percevoir*\n${formatMonnaie(Number(commande.prix_unitaire_reel) * commande.quantite)}`;
+    const lignes = commande.lignes || [];
+    const listeProduits = lignes.map(l => ` ${l.produit?.nom || 'Produit'} x${l.quantite}`).join('\n') || 'N/A';
+    const montant = commande.prix_total ?? lignes.reduce((s, l) => s + Number(l.prix_unitaire_reel) * l.quantite, 0);
+    const message = `*NDJOH AGOGO*\n\n*Nature du produit* :\n${listeProduits}\n\n*Numéro du client* :\n${commande.client_telephone || 'N/A'}\n\n*Adresse de livraison*\n${commande.client_quartier || 'N/A'}\n\n*Montant à percevoir*\n${formatMonnaie(montant)}`;
 
-  await Clipboard.setStringAsync(message);
-  setCopied(true);
-  Alert.alert('Copié !', 'Message prêt à être collé dans WhatsApp');
-  setTimeout(() => setCopied(false), 2000);
-};
+    await Clipboard.setStringAsync(message);
+    setCopied(true);
+    Alert.alert('Copié !', 'Message prêt à être collé dans WhatsApp');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <View style={[styles.card, { backgroundColor: theme.surface }]}>

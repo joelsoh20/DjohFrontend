@@ -126,7 +126,7 @@ export const useCommandes = (options: UseCommandesOptions = {}): UseCommandesRet
     const id = (cmd.id || '').toLowerCase();
     const telephone = (cmd.client_telephone || '').toLowerCase();
     const quartier = (cmd.client_quartier || '').toLowerCase();
-    const produitNom = ((cmd as any).produit?.nom || '').toLowerCase();
+    const produitNom = (cmd.lignes || []).map(l => l.produit?.nom || '').join(' ').toLowerCase();
     return (
       clientNom.includes(search) ||
       id.includes(search) ||

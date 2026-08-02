@@ -14,12 +14,13 @@ import { ChargesCard } from '../../components/dashboard/ChargesCard';
 import { EvolutionChart } from '../../components/dashboard/EvolutionChart';
 import { TopProduitsCard } from '../../components/dashboard/TopProduitsCard';
 import { RecapPeriodeCard } from '../../components/dashboard/RecapPeriodeCard';
+import { VentesParServiceCard } from '../../components/dashboard/VentesParServiceCard';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatMonnaie } from '../../utils/formatMonnaie';
 
 export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { dashboard, loading, refreshing, error, refresh, onRefresh } = useDashboard();
 
@@ -88,13 +89,15 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
             backgroundColor={theme.primaryLight}
             iconColor={theme.primary}
           />
-          <KpiCard
-            title={t('dashboard.netProfit')}
-            value={activeStats.benefice}
-            icon="wallet"
-            backgroundColor={theme.secondaryLight}
-            iconColor={theme.secondary}
-          />
+          {isAdmin && (
+            <KpiCard
+              title={t('dashboard.netProfit')}
+              value={activeStats.benefice}
+              icon="wallet"
+              backgroundColor={theme.secondaryLight}
+              iconColor={theme.secondary}
+            />
+          )}
         </View>
 
         {/* Ventes d'hier */}
@@ -115,27 +118,35 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
   </View>
 </View>
 
-        {/* Bénéfices détaillés (jour, semaine, mois, semestre, année) */}
-        <View style={[styles.beneficesCard, { backgroundColor: theme.surface }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>📊 Bénéfices</Text>
-          <View style={styles.beneficesRow}>
-            <BeneficeItem label="Jour" value={dashboard.jour.beneficeNet} theme={theme} />
-            <BeneficeItem label="Semaine" value={dashboard.semaine.beneficeNet} theme={theme} />
-            <BeneficeItem label="Mois" value={dashboard.mois.beneficeNet} theme={theme} />
+        {/* Ventes par service de livraison (jour / veille) */}
+        <VentesParServiceCard
+          jour={dashboard.ventesParServiceLivraison?.jour || []}
+          hier={dashboard.ventesParServiceLivraison?.hier || []}
+        />
+
+        {/* Bénéfices détaillés (jour, semaine, mois, semestre, année) — admin uniquement */}
+        {isAdmin && (
+          <View style={[styles.beneficesCard, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>📊 Bénéfices</Text>
+            <View style={styles.beneficesRow}>
+              <BeneficeItem label="Jour" value={dashboard.jour.beneficeNet} theme={theme} />
+              <BeneficeItem label="Semaine" value={dashboard.semaine.beneficeNet} theme={theme} />
+              <BeneficeItem label="Mois" value={dashboard.mois.beneficeNet} theme={theme} />
+            </View>
+            <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+            <View style={styles.beneficesRow}>
+              <BeneficeItem label="Semestre" value={dashboard.semestre.beneficeNet} theme={theme} />
+              <BeneficeItem label="Année" value={dashboard.annee.beneficeNet} theme={theme} />
+              <BeneficeItem label="Hier" value={dashboard.hier?.beneficeNet || 0} theme={theme} />
+            </View>
           </View>
-          <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-          <View style={styles.beneficesRow}>
-            <BeneficeItem label="Semestre" value={dashboard.semestre.beneficeNet} theme={theme} />
-            <BeneficeItem label="Année" value={dashboard.annee.beneficeNet} theme={theme} />
-            <BeneficeItem label="Hier" value={dashboard.hier?.beneficeNet || 0} theme={theme} />
-          </View>
-        </View>
+        )}
 
         {/* Charges du mois */}
         <ChargesCard totalCharges={dashboard.mois.totalCharges || 0} details={dashboard.mois.detailsCharges || []} />
 
         {/* Graphique d'évolution */}
-        <EvolutionChart data={dashboard.evolutionMensuelle} />
+        <EvolutionChart data={dashboard.evolutionMensuelle} showBenefice={isAdmin} />
 
         {/* Top Produits */}
         <TopProduitsCard produits={dashboard.topProduits} />

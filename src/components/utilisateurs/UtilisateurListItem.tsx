@@ -54,7 +54,6 @@ export const UtilisateurListItem: React.FC<UtilisateurListItemProps> = ({
               </View>
             )}
           </View>
-          <Text style={[styles.email, { color: theme.textSecondary }]}>{utilisateur.email}</Text>
           <View style={styles.metaRow}>
             <View style={[styles.roleBadge, { backgroundColor: roleConfig.color + '15' }]}>
               <Text style={[styles.roleText, { color: roleConfig.color }]}>{roleConfig.label}</Text>

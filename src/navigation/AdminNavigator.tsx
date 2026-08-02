@@ -22,6 +22,8 @@ import { ClotureMensuelleScreen } from '../screens/admin/ClotureMensuelleScreen'
 import { ExportsScreen } from '../screens/admin/ExportsScreen';
 import { StockScreen } from '../screens/admin/StockScreen';
 import { ServicesLivraisonScreen } from '../screens/admin/ServicesLivraisonScreen';
+import { StatsLivraisonScreen } from '../screens/admin/StatsLivraisonScreen';
+import { StatsLivraisonJourScreen } from '../screens/admin/StatsLivraisonJourScreen';
 import { ClassementScreen } from '../screens/ClassementScreen';
 import { StatsCommercialScreen } from '../screens/admin/StatsCommercialScreen';
 import { GestionAccueilScreen } from '../screens/admin/GestionAccueilScreen';
@@ -42,6 +44,8 @@ type GestionStackParamList = {
   GestionAccueil: undefined;
   Stock: undefined;
   ServicesLivraison: undefined;
+  StatsLivraison: undefined;
+  StatsLivraisonJour: undefined;
   Produits: undefined;
   FormulaireProduit: { productId?: string } | undefined;
   Utilisateurs: undefined;
@@ -87,6 +91,8 @@ const GestionStackScreen = () => {
       <GestionStack.Screen name="GestionAccueil" component={GestionAccueilScreen} options={{ title: 'Gestion' }} />
       <GestionStack.Screen name="Stock" component={StockScreen} options={{ title: 'Stock' }} />
       <GestionStack.Screen name="ServicesLivraison" component={ServicesLivraisonScreen} options={{ title: 'Services Livraison' }} />
+      <GestionStack.Screen name="StatsLivraison" component={StatsLivraisonScreen} options={{ title: 'Stats Livraison' }} />
+      <GestionStack.Screen name="StatsLivraisonJour" component={StatsLivraisonJourScreen} options={{ title: 'Encaissements Livraison' }} />
       <GestionStack.Screen name="Produits" component={ProduitsScreen} options={{ title: 'Produits' }} />
       <GestionStack.Screen name="FormulaireProduit" component={FormulaireProduitScreen} options={{ title: 'Produit' }} />
       <GestionStack.Screen name="Utilisateurs" component={UtilisateursScreen} options={{ title: 'Utilisateurs' }} />

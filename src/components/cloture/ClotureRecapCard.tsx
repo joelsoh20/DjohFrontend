@@ -29,7 +29,7 @@ export const ClotureRecapCard: React.FC<ClotureRecapCardProps> = ({ dashboard, m
     },
     {
       label: t('dashboard.charges'),
-      value: dashboard.mois.charges.publicite + dashboard.mois.charges.echantillons,
+      value: dashboard.mois.totalCharges,
       icon: '📉',
     },
     {

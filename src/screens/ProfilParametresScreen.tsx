@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, StyleSheet, Alert } from 'react-native';            
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +18,7 @@ export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigati
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { isAdmin } = useAuth();
-
+  const [notifEnabled, setNotifEnabled] = useState(false);
   const {
     showPasswordModal,
     setShowPasswordModal,
@@ -30,6 +30,12 @@ export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigati
     setLangue,
     handleLogout,
   } = useProfil();
+
+  useEffect(() => {
+  Notifications.getPermissionsAsync().then(({ status }) => {
+    setNotifEnabled(status === 'granted');
+  });
+}, []);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -78,23 +84,35 @@ export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigati
               onSelect: (value: string) => setLangue(value as Langue),
             },
             {
-  type: 'switch',
-  icon: 'notifications',
-  label: t('parametres.notifications'),
-  value: false,
-  color: theme.primary,
-  onToggle: async (value: boolean) => {
-    if (value) {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status === 'granted') {
-        const tokenData = await Notifications.getExpoPushTokenAsync({
-          projectId: '29287523-3a5f-413b-8fe1-4326daff789c'
-        });
-        await notificationService.registerToken(tokenData.data);
-      }
-    }
-  }
-},
+              type: 'switch',
+              icon: 'notifications',
+              label: t('parametres.notifications'),
+              value: notifEnabled,
+              color: theme.primary,
+              onToggle: async (value: boolean) => {
+                if (value) {
+                  // Activer
+                  const { status } = await Notifications.requestPermissionsAsync();
+                  if (status === 'granted') {
+                    setNotifEnabled(true);
+                    const tokenData = await Notifications.getExpoPushTokenAsync({
+                      projectId: '29287523-3a5f-413b-8fe1-4326daff789c'
+                    });
+                    await notificationService.registerToken(tokenData.data);
+                  } else {
+                    setNotifEnabled(false);
+                  }
+                } else {
+                  // Désactiver
+                  setNotifEnabled(false);
+                  Alert.alert(
+                    'Notifications',
+                    'Vous ne recevrez plus de notifications.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              }
+            },
           ]}
         />
 

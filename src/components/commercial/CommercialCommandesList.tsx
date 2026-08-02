@@ -121,43 +121,20 @@ export const CommercialCommandesList: React.FC<CommercialCommandesListProps> = (
   const { theme } = useTheme();
   const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null);
 
-  // Regrouper par group_id
-  const commandesGroupees = commandes.reduce((acc: any[], cmd: any) => {
-    const key = cmd.group_id || `${cmd.client_nom}_${new Date(cmd.date_creation).getTime()}`;
-    const existing = acc.find(c => c.key === key);
-    if (existing) {
-      existing.produits.push(cmd.produit_nom);
-      existing.total += cmd.total;
-      existing.client_telephone = cmd.client_telephone || existing.client_telephone;
-      existing.ids.push(cmd.id);
-    } else {
-      acc.push({
-        key,
-        client_nom: cmd.client_nom,
-        client_telephone: cmd.client_telephone || null,
-        date: cmd.date_creation,
-        statut: cmd.statut,
-        produits: [cmd.produit_nom],
-        total: cmd.total,
-        firstId: cmd.id,
-        ids: [cmd.id],
-      });
-    }
-    return acc;
-  }, []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  // Grouper par jour
-  const commandesParJour = commandesGroupees.reduce((acc: any[], cmd: any) => {
-    const jour = new Date(cmd.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-    const existing = acc.find(c => c.jour === jour);
-    if (existing) {
-      existing.commandes.push(cmd);
-      existing.totalJour += cmd.total;
-    } else {
-      acc.push({ jour, commandes: [cmd], totalJour: cmd.total });
-    }
-    return acc;
-  }, []);
+  // Grouper par jour (chaque élément de "commandes" est déjà une commande réelle)
+  const commandesParJour = [...commandes]
+    .sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime())
+    .reduce((acc: any[], cmd: any) => {
+      const jour = new Date(cmd.date_creation).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+      const existing = acc.find(c => c.jour === jour);
+      if (existing) {
+        existing.commandes.push(cmd);
+        existing.totalJour += cmd.total;
+      } else {
+        acc.push({ jour, commandes: [cmd], totalJour: cmd.total });
+      }
+      return acc;
+    }, []);
 
   const getStatutColor = (statut: string) => {
     switch (statut) {
@@ -259,7 +236,7 @@ export const CommercialCommandesList: React.FC<CommercialCommandesListProps> = (
                   )}
                   <TouchableOpacity
                     style={[styles.actionBtn, { borderColor: theme.primary }]}
-                    onPress={() => setShowCommentsFor(cmd.firstId)}
+                    onPress={() => setShowCommentsFor(cmd.id)}
                   >
                     <Ionicons name="chatbubble-outline" size={14} color={theme.primary} />
                     <Text style={[styles.actionBtnText, { color: theme.primary }]}>Discussion</Text>

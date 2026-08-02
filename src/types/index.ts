@@ -3,7 +3,7 @@
 // ==========================================
 
 export type Role = 'admin' | 'manager' | 'commercial';
-export type StatutCommande = 'recue' | 'livree_payee' | 'annulee';
+export type StatutCommande = 'recue' | 'validee' | 'livree_payee' | 'annulee';
 export type TypeCharge = 'publicite' | 'echantillon';
 export type CommissionMode = 'forfaitaire' | 'par_produit';
 export type ActionCommandesEnAttente = 'annulees' | 'reportees';
@@ -41,7 +41,18 @@ export interface ProductCommission {
   montant: number;
   produit?: Produit;
 }
-// Commande
+// Ligne de produit au sein d'une commande
+export interface CommandeLigne {
+  id: string;
+  commande_id: string;
+  product_id: string;
+  produit?: Produit;
+  quantite: number;
+  prix_unitaire_reel: number;
+}
+
+// Commande (en-tête) — le statut, les frais de livraison, la commission et
+// le service de livraison sont uniques par commande, pas par produit.
 export interface Commande {
   id: string;
   date_creation: string;
@@ -49,15 +60,16 @@ export interface Commande {
   client_nom: string;
   client_telephone: string | null;
   client_quartier: string | null;
-  product_id: string;
-  produit?: Produit;
-  quantite: number;
-  prix_unitaire_reel: number;
+  lignes: CommandeLigne[];
   commercial_id: string;
   commercial?: Utilisateur;
   frais_livraison: number;
   statut: StatutCommande;
   commission_commercial: number;
+  prix_total: number;
+  service_livraison_id: string | null;
+  service_livraison?: { id: string; nom: string } | null;
+  motif_annulation: string | null;
   cloture_id: string | null;
 }
 
@@ -103,6 +115,29 @@ export interface DashboardData {
   annee: StatsAnnee;
   topProduits: TopProduit[];       // ← Vérifie cette ligne
   evolutionMensuelle: EvolutionMensuelle[];
+  ventesParServiceLivraison: {
+    jour: VenteParService[];
+    hier: VenteParService[];
+  };
+}
+
+export interface VenteParService {
+  serviceId: string;
+  nom: string;
+  montant: number;
+  nombreCommandes: number;
+}
+
+export interface StatsServiceLivraison {
+  serviceId: string;
+  nom: string;
+  actif: boolean;
+  nombreCommandes: number;
+  nombreProduitsLivres: number;
+  valeurProduitsLivres: number;
+  fraisLivraisonTotal: number;
+  montantAPercevoir: number;
+  beneficeNet: number;
 }
 
 export interface StatsPeriode {
@@ -166,11 +201,12 @@ export interface CreerCommandeData {
   client_nom: string;
   client_telephone?: string | null;
   client_quartier?: string | null;
-  product_id: string;
-  quantite: number;
-  prix_unitaire_reel: number;
-  deliverer_id?: string | null;
-  frais_livraison: number;
+  prix_total: number;
+  lignes: {
+    product_id: string;
+    quantite: number;
+    prix_unitaire_reel: number;
+  }[];
 }
 
 export interface CreerUtilisateurData {

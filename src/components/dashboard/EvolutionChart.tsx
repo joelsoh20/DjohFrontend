@@ -11,9 +11,10 @@ const screenWidth = Dimensions.get('window').width;
 
 interface EvolutionChartProps {
   data: EvolutionMensuelle[];
+  showBenefice?: boolean;
 }
 
-export const EvolutionChart: React.FC<EvolutionChartProps> = ({ data }) => {
+export const EvolutionChart: React.FC<EvolutionChartProps> = ({ data, showBenefice = true }) => {
   const { t } = useTranslation();
   const { theme, isDark } = useTheme();
 
@@ -23,6 +24,13 @@ export const EvolutionChart: React.FC<EvolutionChartProps> = ({ data }) => {
   const caData = data.map(e => e.chiffreAffaires);
   const beneficeData = data.map(e => e.beneficeNet);
 
+  const datasets = showBenefice
+    ? [
+        { data: caData, color: () => theme.primary, strokeWidth: 2 },
+        { data: beneficeData, color: () => theme.secondary, strokeWidth: 2 },
+      ]
+    : [{ data: caData, color: () => theme.primary, strokeWidth: 2 }];
+
   return (
     <View style={[styles.card, { backgroundColor: theme.surface }]}>
       <Text style={[styles.title, { color: theme.text }]}>
@@ -30,13 +38,7 @@ export const EvolutionChart: React.FC<EvolutionChartProps> = ({ data }) => {
       </Text>
 
       <LineChart
-        data={{
-          labels,
-          datasets: [
-            { data: caData, color: () => theme.primary, strokeWidth: 2 },
-            { data: beneficeData, color: () => theme.secondary, strokeWidth: 2 },
-          ],
-        }}
+        data={{ labels, datasets }}
         width={screenWidth - 72}
         height={200}
         chartConfig={{
@@ -59,7 +61,7 @@ export const EvolutionChart: React.FC<EvolutionChartProps> = ({ data }) => {
       {/* Légende */}
       <View style={styles.legend}>
         <LegendItem color={theme.primary} label="CA" />
-        <LegendItem color={theme.secondary} label={t('dashboard.netProfit')} />
+        {showBenefice && <LegendItem color={theme.secondary} label={t('dashboard.netProfit')} />}
       </View>
     </View>
   );

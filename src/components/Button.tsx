@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOW_CARD } from '../utils/designSystem';
 
 interface ButtonProps {
   title: string;
@@ -31,12 +32,14 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const colors = getColors();
+  const isSolid = variant !== 'outline';
 
   return (
     <TouchableOpacity
       style={[
         styles.button,
         { backgroundColor: colors.bg, borderColor: colors.border || 'transparent', borderWidth: colors.border ? 1.5 : 0 },
+        isSolid && !disabled && !loading && SHADOW_CARD,
         (disabled || loading) && styles.disabled,
         style
       ]}
@@ -57,7 +60,7 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 50,
@@ -66,7 +69,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   text: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.semibold,
   },
 });

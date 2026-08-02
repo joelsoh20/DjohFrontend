@@ -35,6 +35,11 @@ const InfoRow: React.FC<{
 
 export const CommandeBody: React.FC<CommandeBodyProps> = ({ commande }) => {
   const { theme } = useTheme();
+  const lignes = commande.lignes || [];
+  const montantTotal = commande.prix_total ?? lignes.reduce((s, l) => s + Number(l.prix_unitaire_reel) * l.quantite, 0);
+  const produitLabel = lignes.length === 1
+    ? `${lignes[0].produit?.nom || '-'} x${lignes[0].quantite}`
+    : lignes.map(l => `${l.produit?.nom || '-'} x${l.quantite}`).join(', ');
 
   const items = [
     {
@@ -54,18 +59,18 @@ export const CommandeBody: React.FC<CommandeBodyProps> = ({ commande }) => {
     {
       icon: 'cube-outline' as const,
       label: 'Produit:',
-      value: `${commande.produit?.nom || '-'} x${commande.quantite || 1}`,
+      value: produitLabel || '-',
     },
     {
       icon: 'cash-outline' as const,
       label: 'Prix:',
-      value: formatMonnaie((commande.prix_unitaire_reel || 0) * (commande.quantite || 1)),
+      value: formatMonnaie(montantTotal),
       bold: true,
     },
     {
       icon: 'bicycle-outline' as const,
-      label: 'Livreur:',
-      value: `${commande.livreur?.nom || '-'} • Frais: ${formatMonnaie(commande.frais_livraison || 0)}`,
+      label: 'Livraison:',
+      value: `${commande.service_livraison?.nom || 'Non assigné'} • Frais: ${formatMonnaie(commande.frais_livraison || 0)}`,
     },
     {
       icon: 'person-circle-outline' as const,

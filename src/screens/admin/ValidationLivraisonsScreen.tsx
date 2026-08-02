@@ -5,9 +5,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { useCommandes } from '../../hooks/useCommandes';
+import { Commande, StatutCommande } from '../../types';
 import { SearchBar } from '../../components/validation/SearchBar';
 import { EmptyValidation } from '../../components/validation/EmptyValidation';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -26,16 +28,23 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
     loading, refreshing,
     onRefresh, handleValider, handleAnnuler,
     searchText, setSearchText, commandesFiltrees,
-  } = useCommandes({ statut: 'recue', limit: 100 });
+  } = useCommandes({ limit: 100 });
 
-  const [selectedGroupe, setSelectedGroupe] = useState<any>(null);
+  const [selectedCommande, setSelectedCommande] = useState<Commande | null>(null);
   const [showValidation, setShowValidation] = useState(false);
   const [fraisChoisi, setFraisChoisi] = useState(1000);
   const [showAnnulation, setShowAnnulation] = useState(false);
-  const [groupeToAnnuler, setGroupeToAnnuler] = useState<any>(null);
+  const [commandeToAnnuler, setCommandeToAnnuler] = useState<Commande | null>(null);
   const [motifAnnulation, setMotifAnnulation] = useState('');
   const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null);
   const [valideesLocales, setValideesLocales] = useState<string[]>([]);
+  const [commandesValideesLocales, setCommandesValideesLocales] = useState<Commande[]>([]);
+
+  useEffect(() => {
+    AsyncStorage.getItem('commandesValidees').then(data => {
+      if (data) setCommandesValideesLocales(JSON.parse(data));
+    });
+  }, []);
 
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -49,94 +58,76 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
     return () => clearInterval(interval);
   }, [onRefresh]);
 
-  const commandesGroupees = useMemo(() => {
-    const groupeMap = new Map<string, any>();
-    for (const cmd of commandesFiltrees) {
-      if (!cmd) continue;
-      const key = (cmd as any).group_id || cmd.id;
-      if (!groupeMap.has(key)) {
-        groupeMap.set(key, {
-          id: key,
-          client_nom: cmd.client_nom,
-          client_telephone: cmd.client_telephone,
-          client_quartier: cmd.client_quartier,
-          commercial_nom: (cmd as any).commercial?.nom || 'Inconnu',
-          date_creation: cmd.date_creation,
-          statut: cmd.statut,
-          produits: [],
-          total: 0,
-          commandes: [],
-          firstId: cmd.id,
-        });
-      }
-      const groupe = groupeMap.get(key);
-      groupe.commandes.push(cmd);
-      groupe.total += Number(cmd.prix_unitaire_reel) * cmd.quantite;
-      groupe.produits.push({
-        nom: (cmd as any).produit?.nom || 'Inconnu',
-        quantite: cmd.quantite,
-        prix: Number(cmd.prix_unitaire_reel),
-      });
-    }
-    return Array.from(groupeMap.values())
-      .filter(g => g && g.id)
-      .sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime());
-  }, [commandesFiltrees]);
-
-  const handleValidee = (item: any) => {
+  const handleValidee = (item: Commande) => {
     setValideesLocales(prev => [...prev, item.id]);
-    for (const cmd of item.commandes) {
-      commandeService.updateStatut(cmd.id, 'validee').catch(() => {});
-    }
-    const produits = item.produits.map((p: any) => `📌 ${p.nom} x${p.quantite}`).join('\n');
-    Clipboard.setStringAsync(`🛍️ *NDJOH AGOGO*\n\n📦 *Nature du produit* :\n${produits}\n\n📞 *Numéro du client* :\n${item.client_telephone || 'N/A'}\n\n📍 *Adresse de livraison*\n${item.client_quartier || 'N/A'}\n\n💰 *Montant à percevoir*\n${formatMonnaie(item.total)}`);
+    const nouvellesValidees = commandesValideesLocales.find(c => c.id === item.id)
+      ? commandesValideesLocales
+      : [...commandesValideesLocales, { ...item, statut: 'validee' as StatutCommande }];
+    setCommandesValideesLocales(nouvellesValidees);
+    AsyncStorage.setItem('commandesValidees', JSON.stringify(nouvellesValidees));
+    commandeService.updateStatut(item.id, 'validee').catch(() => {});
+
+    const lignes = item.lignes || [];
+    const produits = lignes.map(l => `📌 ${l.produit?.nom || 'Inconnu'} x${l.quantite}`).join('\n');
+    const montant = item.prix_total ?? lignes.reduce((s, l) => s + Number(l.prix_unitaire_reel) * l.quantite, 0);
+    Clipboard.setStringAsync(`🛍️ *NDJOH AGOGO*\n\n📦 *Nature du produit* :\n${produits}\n\n📞 *Numéro du client* :\n${item.client_telephone || 'N/A'}\n\n📍 *Adresse de livraison*\n${item.client_quartier || 'N/A'}\n\n💰 *Montant à percevoir*\n${formatMonnaie(montant)}`);
     Alert.alert('✅ Copié !', 'Message WhatsApp prêt à être envoyé.');
-    onRefresh();
   };
 
-  const openValidation = (groupe: any) => {
-    setSelectedGroupe(groupe);
+  const openValidation = (commande: Commande) => {
+    setSelectedCommande(commande);
     setShowValidation(true);
   };
 
   const handleServiceSelect = async (serviceId: string) => {
-    if (selectedGroupe) {
-      for (const cmd of selectedGroupe.commandes) {
-        try { await handleValider(cmd.id, fraisChoisi, serviceId); } catch {}
-      }
+    if (selectedCommande) {
+      try { await handleValider(selectedCommande.id, fraisChoisi, serviceId); } catch {}
     }
     setShowValidation(false);
-    setSelectedGroupe(null);
+    setSelectedCommande(null);
     onRefresh();
   };
 
-  const handleAnnulerGroupe = (groupe: any) => {
-    setGroupeToAnnuler(groupe);
+  const handleAnnulerGroupe = (commande: Commande) => {
+    setCommandeToAnnuler(commande);
     setMotifAnnulation('');
     setShowAnnulation(true);
   };
 
   const confirmAnnulation = async () => {
-    if (groupeToAnnuler) {
-      for (const cmd of groupeToAnnuler.commandes) {
-        try { await handleAnnuler(cmd.id, motifAnnulation); } catch {}
-      }
+    if (commandeToAnnuler) {
+      try { await handleAnnuler(commandeToAnnuler.id, motifAnnulation); } catch {}
     }
     setShowAnnulation(false);
-    setGroupeToAnnuler(null);
+    setCommandeToAnnuler(null);
     onRefresh();
   };
 
-  if (loading && commandesFiltrees.length === 0) {
+  // ✅ Tous les hooks sont ici, AVANT tout return conditionnel
+  const toutesCommandes = useMemo(() => {
+    const fusion: Commande[] = [...commandesFiltrees];
+    for (const cmd of commandesValideesLocales) {
+      if (!fusion.find(c => c.id === cmd.id)) {
+        fusion.push(cmd);
+      }
+    }
+    return fusion.sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime());
+  }, [commandesFiltrees, commandesValideesLocales]);
+
+  const enAttente = toutesCommandes.filter(item =>
+    item.statut === 'recue' || item.statut === 'validee'
+  );
+  const validees = toutesCommandes.filter(item =>
+    item.statut === 'livree_payee' || item.statut === 'annulee'
+  );
+
+  if (loading && commandesFiltrees.length === 0 && commandesValideesLocales.length === 0) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <LoadingSpinner fullScreen message={t('common.loading')} />
       </View>
     );
   }
-
-  const enAttente = commandesGroupees.filter(item => item.statut === 'recue');
-  const validees = commandesGroupees.filter(item => item.statut === 'validee' || item.statut === 'livree_payee' || item.statut === 'annulee');
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -147,7 +138,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
         <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
       </TouchableOpacity>
 
-      {commandesGroupees.length === 0 ? (
+      {toutesCommandes.length === 0 ? (
         <EmptyValidation hasSearchText={searchText.length > 0} />
       ) : (
         <ScrollView
@@ -168,7 +159,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
                 key={item.id}
                 item={item}
                 theme={theme}
-                estVert={valideesLocales.includes(item.id)}
+                estVert={valideesLocales.includes(item.id) || item.statut === 'validee'}
                 onValidee={handleValidee}
                 onAnnulerGroupe={handleAnnulerGroupe}
                 onOpenValidation={openValidation}

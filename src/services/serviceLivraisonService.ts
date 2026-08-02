@@ -24,5 +24,17 @@ export const serviceLivraisonService = {
   getStocks: async (serviceId: string) => {
     const response = await api.get(`/services-livraison/${serviceId}/stocks`);
     return response.data;
+  },
+  getStats: async (periode: 'jour' | 'semaine' | 'mois' | 'tout' = 'jour') => {
+    const response = await api.get('/services-livraison/stats', { params: { periode } });
+    return response.data;
+  },
+  getStatsJourHier: async () => {
+    const response = await api.get('/services-livraison/stats-jour-hier');
+    return response.data;
+  },
+  getStatsPourDate: async (date: string) => {
+    const response = await api.get('/services-livraison/stats-jour', { params: { date } });
+    return response.data;
   }
 };

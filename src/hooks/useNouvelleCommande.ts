@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { produitService } from '../services/produitService';
 import { commandeService } from '../services/commandeService';
-import { useAuth } from '../context/AuthContext';
 import { Produit } from '../types';
 
 interface ProduitSelectionne {
@@ -10,16 +9,6 @@ interface ProduitSelectionne {
   nom: string;
   prix: number;
   quantite: number;
-}
-
-interface CommandeToEdit {
-  id: string;
-  client_telephone?: string;
-  client_quartier?: string;
-  prix_unitaire_reel?: number;
-  product_id?: string;
-  quantite?: number;
-  produit?: { id: string; nom: string; prix_catalogue?: number };
 }
 
 interface UseNouvelleCommandeReturn {
@@ -46,9 +35,13 @@ const INITIAL_FORM = {
   prix: '',
 };
 
-export const useNouvelleCommande = (commandeToEdit?: CommandeToEdit): UseNouvelleCommandeReturn => {
-  const { utilisateur } = useAuth();
-  const isEditMode = !!commandeToEdit;
+/**
+ * @param commandeIdToEdit id de la commande à éditer. La commande complète
+ * (avec toutes ses lignes) est rechargée depuis l'API plutôt que reçue via
+ * les paramètres de navigation, pour ne jamais éditer un objet partiel.
+ */
+export const useNouvelleCommande = (commandeIdToEdit?: string): UseNouvelleCommandeReturn => {
+  const isEditMode = !!commandeIdToEdit;
 
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [produits, setProduits] = useState<Produit[]>([]);
@@ -56,56 +49,54 @@ export const useNouvelleCommande = (commandeToEdit?: CommandeToEdit): UseNouvell
   const [loadingData, setLoadingData] = useState(true);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
 
-  // Chargement des produits + pré-remplissage si mode édition
   useEffect(() => {
-  const charger = async () => {
-    try {
-      const res = await produitService.getAll();
-      console.log('Réponse produits bruts:', JSON.stringify(res));
-      
-      // Accepter plusieurs formats de réponse
-      let produitsList: Produit[] = [];
-      if (Array.isArray(res)) {
-        produitsList = res;
-      } else if (res?.success && Array.isArray(res.data)) {
-        produitsList = res.data;
-      } else if (res?.data && Array.isArray(res.data)) {
-        produitsList = res.data;
-      } else if (Array.isArray(res?.produits)) {
-        produitsList = res.produits;
-      }
-      
-      console.log('Produits parsés:', produitsList.length);
-      setProduits(produitsList);
+    const charger = async () => {
+      try {
+        const res = await produitService.getAll();
 
-      // Pré-remplissage si mode édition
-      if (commandeToEdit) {
-        setFormData({
-          client_telephone: commandeToEdit.client_telephone || '',
-          client_quartier: commandeToEdit.client_quartier || '',
-          prix: commandeToEdit.prix_unitaire_reel?.toString() || '',
-        });
-
-        if (commandeToEdit.product_id && commandeToEdit.produit) {
-          const produitTrouve = produitsList.find(p => p.id === commandeToEdit.product_id);
-          const prix = produitTrouve?.prix_catalogue || commandeToEdit.produit.prix_catalogue || 0;
-          setProduitsSelectionnes([{
-            product_id: commandeToEdit.product_id,
-            nom: commandeToEdit.produit.nom || '',
-            prix,
-            quantite: commandeToEdit.quantite || 1,
-          }]);
+        let produitsList: Produit[] = [];
+        if (Array.isArray(res)) {
+          produitsList = res;
+        } else if (res?.success && Array.isArray(res.data)) {
+          produitsList = res.data;
+        } else if (res?.data && Array.isArray(res.data)) {
+          produitsList = res.data;
+        } else if (Array.isArray(res?.produits)) {
+          produitsList = res.produits;
         }
+
+        setProduits(produitsList);
+
+        if (commandeIdToEdit) {
+          const detailRes = await commandeService.getById(commandeIdToEdit);
+          const commande = detailRes?.data;
+          if (commande) {
+            setFormData({
+              client_telephone: commande.client_telephone || '',
+              client_quartier: commande.client_quartier || '',
+              prix: commande.prix_total?.toString() || '',
+            });
+
+            const lignes = commande.lignes || [];
+            setProduitsSelectionnes(lignes.map((l: any) => {
+              const produitTrouve = produitsList.find(p => p.id === l.product_id);
+              return {
+                product_id: l.product_id,
+                nom: l.produit?.nom || produitTrouve?.nom || '',
+                prix: Number(l.prix_unitaire_reel),
+                quantite: l.quantite,
+              };
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Erreur chargement produits/commande:', err);
+      } finally {
+        setLoadingData(false);
       }
-    } catch (err) {
-      console.error('Erreur chargement produits:', err);
-    } finally {
-      setLoadingData(false);
-    }
-  };
-  charger();
-}, []);
-  
+    };
+    charger();
+  }, [commandeIdToEdit]);
 
   const updateField = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -126,6 +117,11 @@ export const useNouvelleCommande = (commandeToEdit?: CommandeToEdit): UseNouvell
     );
   }, []);
 
+  const resetForm = useCallback(() => {
+    setFormData(INITIAL_FORM);
+    setProduitsSelectionnes([]);
+  }, []);
+
   const handleSubmit = useCallback(async () => {
     if (produitsSelectionnes.length === 0) {
       Alert.alert('Erreur', 'Sélectionnez au moins un produit');
@@ -141,32 +137,29 @@ export const useNouvelleCommande = (commandeToEdit?: CommandeToEdit): UseNouvell
 
     setLoadingSubmit(true);
     try {
-      if (isEditMode && commandeToEdit) {
-        // Mode édition : mise à jour
-        const ligne = produitsSelectionnes[0];
-        await commandeService.update(commandeToEdit.id, {
+      const lignes = produitsSelectionnes.map(p => ({
+        product_id: p.product_id,
+        quantite: p.quantite,
+        prix_unitaire_reel: p.prix,
+      }));
+
+      if (isEditMode && commandeIdToEdit) {
+        await commandeService.update(commandeIdToEdit, {
           client_telephone: formData.client_telephone.trim() || null,
           client_quartier: formData.client_quartier.trim() || null,
-          product_id: ligne.product_id,
-          quantite: ligne.quantite,
-          prix_unitaire_reel: prixSaisi,
+          lignes,
         });
 
         Alert.alert('Succès', 'Commande modifiée !', [
           { text: 'OK', onPress: () => resetForm() }
         ]);
       } else {
-        // Mode création
         await commandeService.creer({
           client_nom: 'NDJOH AGOGO',
           client_telephone: formData.client_telephone.trim() || null,
           client_quartier: formData.client_quartier.trim() || null,
           prix_total: prixSaisi,
-          lignes: produitsSelectionnes.map(p => ({
-            product_id: p.product_id,
-            quantite: p.quantite,
-            prix_unitaire_reel: p.prix,
-          })),
+          lignes,
         });
 
         Alert.alert('Succès', 'Commande enregistrée !', [
@@ -178,12 +171,7 @@ export const useNouvelleCommande = (commandeToEdit?: CommandeToEdit): UseNouvell
     } finally {
       setLoadingSubmit(false);
     }
-  }, [formData, produitsSelectionnes, isEditMode, commandeToEdit]);
-
-  const resetForm = useCallback(() => {
-    setFormData(INITIAL_FORM);
-    setProduitsSelectionnes([]);
-  }, []);
+  }, [formData, produitsSelectionnes, isEditMode, commandeIdToEdit]);
 
   return {
     formData, produits, produitsSelectionnes,

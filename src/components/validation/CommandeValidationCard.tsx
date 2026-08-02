@@ -2,27 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
+import { Commande } from '../../types';
 import { formatMonnaie } from '../../utils/formatMonnaie';
 import { formatDateHeure } from '../../utils/formatDate';
 
 interface CommandeValidationCardProps {
-  item: any;
+  item: Commande;
   theme: any;
-  estTraitee: boolean;
-  onValidee: (item: any) => void;
-  onAnnulerGroupe: (item: any) => void;
-  onOpenValidation: (item: any) => void;
+  estVert: boolean;
+  onValidee: (item: Commande) => void;
+  onAnnulerGroupe: (item: Commande) => void;
+  onOpenValidation: (item: Commande) => void;
   onShowComments: (id: string) => void;
 }
 
 export const CommandeValidationCard: React.FC<CommandeValidationCardProps> = ({
-  item, theme, estTraitee, onValidee, onAnnulerGroupe, onOpenValidation, onShowComments
+  item, theme, estVert, onValidee, onAnnulerGroupe, onOpenValidation, onShowComments
 }) => {
   const [dernierCommentaire, setDernierCommentaire] = useState<any>(null);
+  const lignes = item.lignes || [];
+  const montantTotal = item.prix_total ?? lignes.reduce((s, l) => s + Number(l.prix_unitaire_reel) * l.quantite, 0);
 
   useEffect(() => {
-    if (!item.firstId) return;
-    api.get(`/order-comments/${item.firstId}`)
+    if (!item.id) return;
+    api.get(`/order-comments/${item.id}`)
       .then(res => {
         if (res.data?.success) {
           const data = res.data.data || [];
@@ -30,7 +33,7 @@ export const CommandeValidationCard: React.FC<CommandeValidationCardProps> = ({
         }
       })
       .catch(() => {});
-  }, [item.firstId]);
+  }, [item.id]);
 
   return (
     <View style={[styles.card, { backgroundColor: theme.surface }]}>
@@ -39,24 +42,24 @@ export const CommandeValidationCard: React.FC<CommandeValidationCardProps> = ({
           <Text style={[styles.clientName, { color: theme.text }]}>👤 {item.client_nom}</Text>
           <Text style={[styles.info, { color: theme.textTertiary }]}>📱 {item.client_telephone || 'N/A'}</Text>
           <Text style={[styles.info, { color: theme.textTertiary }]}>📍 {item.client_quartier || 'N/A'}</Text>
-          <Text style={[styles.info, { color: theme.textTertiary }]}>👩‍💼 {item.commercial_nom}</Text>
+          <Text style={[styles.info, { color: theme.textTertiary }]}>👩‍💼 {item.commercial?.nom || 'Inconnu'}</Text>
           <Text style={[styles.info, { color: theme.textTertiary }]}>🕐 {formatDateHeure(item.date_creation)}</Text>
         </View>
-        <View style={[styles.badge, { backgroundColor: estTraitee ? theme.secondaryLight : theme.warningLight }]}>
-          <Text style={[styles.badgeText, { color: estTraitee ? theme.secondary : theme.warning }]}>
-            {estTraitee ? 'Validée' : 'En attente'}
-          </Text>
-        </View>
+       <View style={[styles.badge, { backgroundColor: estVert ? '#90EE90' : theme.warningLight }]}>
+         <Text style={[styles.badgeText, { color: estVert ? '#228B22' : theme.warning }]}>
+           {estVert ? 'Validée' : 'En attente'}
+         </Text>
+       </View>
       </View>
       <View style={[styles.divider, { backgroundColor: theme.divider }]} />
       <Text style={[styles.label, { color: theme.textSecondary }]}>📦 Nature du produit :</Text>
-      {item.produits.map((p: any, i: number) => (
-        <Text key={i} style={[styles.produit, { color: theme.text }]}>• {p.nom} x{p.quantite} — {formatMonnaie(p.prix * p.quantite)}</Text>
+      {lignes.map((l, i) => (
+        <Text key={l.id || i} style={[styles.produit, { color: theme.text }]}>• {l.produit?.nom || 'Inconnu'} x{l.quantite} — {formatMonnaie(Number(l.prix_unitaire_reel) * l.quantite)}</Text>
       ))}
       <View style={[styles.divider, { backgroundColor: theme.divider }]} />
       <View style={styles.totalRow}>
         <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>💰 Montant à percevoir</Text>
-        <Text style={[styles.totalValue, { color: theme.text }]}>{formatMonnaie(item.total)}</Text>
+        <Text style={[styles.totalValue, { color: theme.text }]}>{formatMonnaie(montantTotal)}</Text>
       </View>
 
       {dernierCommentaire && (
@@ -79,36 +82,32 @@ export const CommandeValidationCard: React.FC<CommandeValidationCardProps> = ({
       <View style={[styles.divider, { backgroundColor: theme.divider }]} />
       <TouchableOpacity
         style={[styles.commentBtn, { borderColor: theme.primary }]}
-        onPress={() => onShowComments(item.firstId)}
+        onPress={() => onShowComments(item.id)}
       >
         <Ionicons name="chatbubble-outline" size={16} color={theme.primary} />
         <Text style={[styles.commentBtnText, { color: theme.primary }]}>💬 Voir les commentaires</Text>
       </TouchableOpacity>
       <View style={[styles.divider, { backgroundColor: theme.divider }]} />
       <View style={styles.actions}>
-        {!estTraitee && (
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.copyBtn, {
-              borderColor: theme.primary,
-              backgroundColor: 'transparent'
-            }]}
-            onPress={() => onValidee(item)}
-          >
-            <Ionicons name="copy-outline" size={16} color={theme.primary} />
-            <Text style={[styles.actionText, { color: theme.primary }]}>Validée</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={[styles.actionBtn, { borderColor: theme.danger }]} onPress={() => onAnnulerGroupe(item)}>
-          <Ionicons name="close-circle-outline" size={16} color={theme.danger} />
-          <Text style={[styles.actionText, { color: theme.danger }]}>Annuler</Text>
-        </TouchableOpacity>
-        {!estTraitee && (
-          <TouchableOpacity style={[styles.actionBtn, styles.validateBtn, { backgroundColor: theme.secondary }]} onPress={() => onOpenValidation(item)}>
-            <Ionicons name="checkmark-circle-outline" size={16} color="#FFF" />
-            <Text style={[styles.actionText, { color: '#FFF' }]}>Livré</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+  <TouchableOpacity
+    style={[styles.actionBtn, styles.copyBtn, {
+      borderColor: estVert ? theme.secondary : theme.primary,
+      backgroundColor: estVert ? '#90EE90' : 'transparent'
+    }]}
+    onPress={() => onValidee(item)}
+  >
+    <Ionicons name={estVert ? 'checkmark-circle' : 'copy-outline'} size={16} color={estVert ? '#228B22' : theme.primary} />
+    <Text style={[styles.actionText, { color: estVert ? '#228B22' : theme.primary }]}>Validée</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={[styles.actionBtn, { borderColor: theme.danger }]} onPress={() => onAnnulerGroupe(item)}>
+    <Ionicons name="close-circle-outline" size={16} color={theme.danger} />
+    <Text style={[styles.actionText, { color: theme.danger }]}>Annuler</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={[styles.actionBtn, styles.validateBtn, { backgroundColor: theme.secondary }]} onPress={() => onOpenValidation(item)}>
+    <Ionicons name="checkmark-circle-outline" size={16} color="#FFF" />
+    <Text style={[styles.actionText, { color: '#FFF' }]}>Livré</Text>
+  </TouchableOpacity>
+</View>
     </View>
   );
 };

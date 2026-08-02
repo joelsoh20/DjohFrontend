@@ -9,13 +9,13 @@ import { CommandeFormSkeleton } from '../../components/commande/CommandeFormSkel
 
 export const NouvelleCommandeScreen: React.FC<{ navigation: any; route?: any }> = ({ navigation, route }) => {
   const { theme } = useTheme();
-  const commandeToEdit = route?.params?.commande || undefined;
+  const commandeIdToEdit = route?.params?.commandeId || undefined;
 
   const {
     formData, produits, produitsSelectionnes,
     loadingData, loadingSubmit, isEditMode,
     updateField, toggleProduit, updateQuantite, handleSubmit,
-  } = useNouvelleCommande(commandeToEdit);
+  } = useNouvelleCommande(commandeIdToEdit);
 
   const produitsActifs = produits.filter(p => p.actif);
   const totalProduits = produitsSelectionnes.reduce((sum, p) => sum + p.prix * p.quantite, 0);

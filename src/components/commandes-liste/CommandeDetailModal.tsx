@@ -34,6 +34,7 @@ export const CommandeDetailModal: React.FC<CommandeDetailModalProps> = ({
   const getStatutLabel = (statut: StatutCommande) => {
     switch (statut) {
       case 'recue': return t('commande.statutRecue');
+      case 'validee': return t('commande.statutValidee');
       case 'livree_payee': return t('commande.statutLivree');
       case 'annulee': return t('commande.statutAnnulee');
     }
@@ -42,12 +43,14 @@ export const CommandeDetailModal: React.FC<CommandeDetailModalProps> = ({
   const getStatutColor = (statut: StatutCommande) => {
     switch (statut) {
       case 'recue': return theme.warning;
+      case 'validee': return theme.warning;
       case 'livree_payee': return theme.secondary;
       case 'annulee': return theme.danger;
     }
   };
 
-  const montantTotal = (commande.prix_unitaire_reel || 0) * (commande.quantite || 1);
+  const lignes = commande.lignes || [];
+  const montantTotal = commande.prix_total ?? lignes.reduce((s, l) => s + Number(l.prix_unitaire_reel) * l.quantite, 0);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -90,15 +93,16 @@ export const CommandeDetailModal: React.FC<CommandeDetailModalProps> = ({
               )}
             </DetailSection>
 
-            {/* Section Produit */}
+            {/* Section Produits */}
             <DetailSection title={t('commande.product')} icon="cube" theme={theme}>
-              <DetailRow label="Produit" value={commande.produit?.nom || '-'} theme={theme} />
-              <DetailRow label={t('commande.quantity')} value={String(commande.quantite || 1)} theme={theme} />
-              <DetailRow
-                label={t('commande.unitPrice')}
-                value={formatMonnaie(commande.prix_unitaire_reel || 0)}
-                theme={theme}
-              />
+              {lignes.map((ligne, i) => (
+                <DetailRow
+                  key={ligne.id || i}
+                  label={`${ligne.produit?.nom || '-'} x${ligne.quantite}`}
+                  value={formatMonnaie(Number(ligne.prix_unitaire_reel) * ligne.quantite)}
+                  theme={theme}
+                />
+              ))}
               <DetailRow
                 label={t('commande.total')}
                 value={formatMonnaie(montantTotal)}
@@ -109,7 +113,7 @@ export const CommandeDetailModal: React.FC<CommandeDetailModalProps> = ({
 
             {/* Section Livraison */}
             <DetailSection title={t('commande.deliverer')} icon="bicycle" theme={theme}>
-              <DetailRow label="Livreur" value={commande.livreur?.nom || 'Non assigné'} theme={theme} />
+              <DetailRow label="Service de livraison" value={commande.service_livraison?.nom || 'Non assigné'} theme={theme} />
               <DetailRow
                 label={t('commande.deliveryFees')}
                 value={formatMonnaie(commande.frais_livraison || 0)}
@@ -131,6 +135,13 @@ export const CommandeDetailModal: React.FC<CommandeDetailModalProps> = ({
             {commande.date_statut_livree && (
               <DetailSection title="Dates" icon="calendar" theme={theme}>
                 <DetailRow label="Livrée le" value={formatDateComplete(commande.date_statut_livree)} theme={theme} />
+              </DetailSection>
+            )}
+
+            {/* Motif d'annulation */}
+            {commande.statut === 'annulee' && commande.motif_annulation && (
+              <DetailSection title="Motif d'annulation" icon="close-circle" theme={theme}>
+                <Text style={[styles.motifText, { color: theme.text }]}>{commande.motif_annulation}</Text>
               </DetailSection>
             )}
 
@@ -221,6 +232,7 @@ const detailStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  motifText: { fontSize: 14, lineHeight: 20 },
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',

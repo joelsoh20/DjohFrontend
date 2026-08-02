@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../../components/Button';
+import { SPACING, RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOW_CARD } from '../../utils/designSystem';
 import { Image } from 'react-native';
 
 export const LoginScreen: React.FC = () => {
@@ -87,7 +88,7 @@ export const LoginScreen: React.FC = () => {
             <Text style={[styles.label, { color: theme.text }]}>
               Nom d'utilisateur
             </Text>
-            <View style={[styles.inputContainer, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+            <View style={[styles.inputContainer, { backgroundColor: theme.surface, borderColor: theme.divider }, SHADOW_CARD]}>
               <Ionicons name="person-outline" size={20} color={theme.textTertiary} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: theme.text }]}
@@ -106,7 +107,7 @@ export const LoginScreen: React.FC = () => {
             <Text style={[styles.label, { color: theme.text }]}>
               {t('auth.password')}
             </Text>
-            <View style={[styles.inputContainer, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+            <View style={[styles.inputContainer, { backgroundColor: theme.surface, borderColor: theme.divider }, SHADOW_CARD]}>
               <Ionicons name="lock-closed-outline" size={20} color={theme.textTertiary} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: theme.text }]}
@@ -206,26 +207,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg,
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: SPACING.sm + 2,
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
-    fontSize: 16,
+    paddingVertical: SPACING.lg,
+    fontSize: FONT_SIZE.lg,
   },
   eyeButton: {
-    padding: 8,
+    padding: SPACING.sm,
   },
   loginButton: {
-    marginTop: 10,
+    marginTop: SPACING.sm,
   },
   footer: {
     textAlign: 'center',
-    marginTop: 40,
-    fontSize: 12,
+    marginTop: SPACING.xxxl + 8,
+    fontSize: FONT_SIZE.sm,
   },
 });

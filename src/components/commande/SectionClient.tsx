@@ -10,12 +10,6 @@ import { CommandeFormData, FormErrors } from '../../types/commande';
 interface SectionClientProps {
   data: CommandeFormData;
   errors: FormErrors;
-  onChange: (field: string, value: string) => void;
-}
-
-interface SectionClientProps {
-  data: CommandeFormData;
-  errors: FormErrors;
   onChange: (field: keyof CommandeFormData, value: string) => void;
 }
 

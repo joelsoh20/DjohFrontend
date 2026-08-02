@@ -41,5 +41,15 @@ export const utilisateurService = {
   changerMotDePasse: async (id: string, motDePasse: string) => {
     const response = await api.patch(`/utilisateurs/${id}/mot-de-passe`, { mot_de_passe: motDePasse });
     return response.data;
+  },
+
+  addCommissionProduit: async (userId: string, productId: string, montant: number) => {
+    const response = await api.post(`/utilisateurs/${userId}/commissions-produits`, { product_id: productId, montant });
+    return response.data;
+  },
+
+  removeCommissionProduit: async (userId: string, productId: string) => {
+    const response = await api.delete(`/utilisateurs/${userId}/commissions-produits/${productId}`);
+    return response.data;
   }
 };

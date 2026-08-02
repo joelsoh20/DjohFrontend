@@ -38,7 +38,7 @@ export const useCommissions = (): UseCommissionsReturn => {
       ]);
 
       if (usersRes.success && usersRes.data) {
-        const users = usersRes.data.filter(u => u.role === 'commercial');
+        const users = usersRes.data.filter((u: Utilisateur) => u.role === 'commercial');
         setCommerciaux(users);
         // Prendre la commission du premier comme défaut global
         if (users.length > 0 && users[0].commission_defaut) {
@@ -46,13 +46,13 @@ export const useCommissions = (): UseCommissionsReturn => {
         }
         // Mettre à jour le commercial sélectionné
         if (selectedCommercial) {
-          const updated = users.find(u => u.id === selectedCommercial.id);
+          const updated = users.find((u: Utilisateur) => u.id === selectedCommercial.id);
           if (updated) setSelectedCommercial(updated);
         }
       }
 
       if (produitsRes.success && produitsRes.data) {
-        setProduits(produitsRes.data.filter(p => p.actif));
+        setProduits(produitsRes.data.filter((p: Produit) => p.actif));
       }
     } catch (err) {
       console.error('Erreur chargement commissions:', err);

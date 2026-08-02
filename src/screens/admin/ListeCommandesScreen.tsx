@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   FlatList,
@@ -13,10 +13,12 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useListeCommandes } from '../../hooks/useListeCommandes';
+import { Commande } from '../../types';
 import { SearchBar } from '../../components/validation/SearchBar';
 import { CommandesFilterBar } from '../../components/commandes-liste/CommandesFilterBar';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { EmptyState } from '../../components/EmptyState';
+import { AnnulationModal } from '../../components/validation/AnnulationModal';
 import { formatMonnaie } from '../../utils/formatMonnaie';
 import { formatDateCourte } from '../../utils/formatDate';
 import { commandeService } from '../../services/commandeService';
@@ -47,37 +49,26 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
   // État pour la modale de discussion
   const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null);
 
-  // Grouper les commandes par group_id
-  const commandesGroupees = useMemo(() => {
-    const groupeMap = new Map<string, any>();
-    for (const cmd of commandesFiltrees) {
-      const key = (cmd as any).group_id || cmd.id;
-      if (!groupeMap.has(key)) {
-        groupeMap.set(key, {
-          id: key,
-          client_nom: cmd.client_nom,
-          client_telephone: cmd.client_telephone,
-          client_quartier: cmd.client_quartier,
-          date_creation: cmd.date_creation,
-          statut: cmd.statut,
-          commercial_nom: (cmd as any).commercial?.nom || 'Inconnu',
-          commandes: [],
-          produits: [],
-          total: 0,
-        });
-      }
-      const groupe = groupeMap.get(key);
-      groupe.commandes.push(cmd);
-      groupe.total += Number(cmd.prix_unitaire_reel) * cmd.quantite;
-      groupe.produits.push({
-        nom: (cmd as any).produit?.nom || 'Inconnu',
-        quantite: cmd.quantite,
-        prix: Number(cmd.prix_unitaire_reel),
-      });
+  // État pour la modale d'annulation (motif obligatoire, notifie le commercial)
+  const [commandeAAnnuler, setCommandeAAnnuler] = useState<Commande | null>(null);
+  const [motifAnnulation, setMotifAnnulation] = useState('');
+  const [annulationEnCours, setAnnulationEnCours] = useState(false);
+
+  const confirmerAnnulation = async () => {
+    if (!commandeAAnnuler) return;
+    setAnnulationEnCours(true);
+    try {
+      await commandeService.updateStatut(commandeAAnnuler.id, 'annulee', undefined, undefined, motifAnnulation);
+      Alert.alert('Succès', 'Commande annulée, stock restauré et commercial notifié.');
+      setCommandeAAnnuler(null);
+      setMotifAnnulation('');
+      refresh();
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+    } finally {
+      setAnnulationEnCours(false);
     }
-    return Array.from(groupeMap.values())
-      .sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime());
-  }, [commandesFiltrees]);
+  };
 
   const getStatutColor = (statut: string) => {
     switch (statut) {
@@ -119,23 +110,19 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
       <CommandesFilterBar
         statutActif={filters.statut}
         onStatutChange={setStatut}
-        total={commandesGroupees.length}
+        total={commandesFiltrees.length}
       />
 
       <FlatList
-        data={commandesGroupees}
+        data={commandesFiltrees}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          // L'annulation est possible seulement si livré depuis moins d'1h
-          const peutAnnuler =
-            item.statut === 'livree_payee' &&
-            item.commandes?.length > 0 &&
-            (() => {
-              const dateLivraison = item.commandes[0]?.date_statut_livree;
-              if (!dateLivraison) return false;
-              const uneHeure = 60 * 60 * 1000;
-              return Date.now() - new Date(dateLivraison).getTime() < uneHeure;
-            })();
+        renderItem={({ item }: { item: Commande }) => {
+          const lignes = item.lignes || [];
+          const total = item.prix_total ?? lignes.reduce((s, l) => s + Number(l.prix_unitaire_reel) * l.quantite, 0);
+
+          // Admin et manager peuvent annuler une commande livrée à tout
+          // moment (pour corriger une erreur) — plus de limite d'1h.
+          const peutAnnuler = item.statut === 'livree_payee' && (isAdmin || isManager);
 
           return (
             <View style={[styles.card, { backgroundColor: theme.surface }]}>
@@ -152,7 +139,7 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
                     {formatDateCourte(item.date_creation)}
                   </Text>
                   <Text style={[styles.info, { color: theme.textTertiary }]}>
-                    👩‍💼 {item.commercial_nom}
+                    👩‍💼 {item.commercial?.nom || 'Inconnu'}
                   </Text>
                 </View>
                 <View
@@ -178,18 +165,26 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
               <Text style={[styles.label, { color: theme.textSecondary }]}>
                 📦 Produits :
               </Text>
-              {item.produits.map((p: any, i: number) => (
-                <Text key={i} style={[styles.produit, { color: theme.text }]}>
-                  • {p.nom} x{p.quantite}
+              {lignes.map((l, i) => (
+                <Text key={l.id || i} style={[styles.produit, { color: theme.text }]}>
+                  • {l.produit?.nom || 'Inconnu'} x{l.quantite}
                 </Text>
               ))}
+
+              {item.statut === 'annulee' && item.motif_annulation && (
+                <View style={[styles.motifBox, { backgroundColor: theme.dangerLight }]}>
+                  <Text style={[styles.motifLabel, { color: theme.danger }]}>Motif d'annulation :</Text>
+                  <Text style={[styles.motifText, { color: theme.text }]}>{item.motif_annulation}</Text>
+                </View>
+              )}
+
               <View style={[styles.divider, { backgroundColor: theme.divider }]} />
               <View style={styles.totalRow}>
                 <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>
                   Total
                 </Text>
                 <Text style={[styles.totalValue, { color: theme.text }]}>
-                  {formatMonnaie(item.total)}
+                  {formatMonnaie(total)}
                 </Text>
               </View>
 
@@ -216,11 +211,7 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
                 {/* Bouton Discussion */}
                 <TouchableOpacity
                   style={[styles.actionBtn, { borderColor: theme.primary }]}
-                  onPress={() =>
-                    setShowCommentsFor(
-                      item.commandes?.[0]?.id || item.id
-                    )
-                  }
+                  onPress={() => setShowCommentsFor(item.id)}
                 >
                   <Ionicons name="chatbubble-outline" size={14} color={theme.primary} />
                   <Text style={[styles.actionBtnText, { color: theme.primary }]}>
@@ -228,36 +219,13 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
                   </Text>
                 </TouchableOpacity>
 
-                {/* Bouton Annuler (existant) */}
+                {/* Bouton Annuler (commande livrée — corrige une erreur) */}
                 {peutAnnuler && (
                   <TouchableOpacity
                     style={[styles.annulerBtn, { borderColor: theme.danger }]}
                     onPress={() => {
-                      Alert.alert(
-                        'Annuler la commande',
-                        'Voulez-vous annuler cette commande et restaurer le stock ?',
-                        [
-                          { text: 'Non', style: 'cancel' },
-                          {
-                            text: 'Oui, annuler',
-                            style: 'destructive',
-                            onPress: async () => {
-                              try {
-                                for (const cmd of item.commandes) {
-                                  await commandeService.updateStatut(cmd.id, 'annulee');
-                                }
-                                Alert.alert('Succès', 'Commande annulée et stock restauré.');
-                                refresh();
-                              } catch (err: any) {
-                                Alert.alert(
-                                  'Erreur',
-                                  err.response?.data?.message || 'Erreur'
-                                );
-                              }
-                            },
-                          },
-                        ]
-                      );
+                      setMotifAnnulation('');
+                      setCommandeAAnnuler(item);
                     }}
                   >
                     <Ionicons
@@ -288,7 +256,7 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
         }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={
-          commandesGroupees.length === 0 ? styles.emptyContainer : styles.listContent
+          commandesFiltrees.length === 0 ? styles.emptyContainer : styles.listContent
         }
       />
 
@@ -297,6 +265,16 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
         visible={!!showCommentsFor}
         onClose={() => setShowCommentsFor(null)}
         orderId={showCommentsFor || ''}
+      />
+
+      {/* Modale d'annulation (commande livrée) — motif obligatoire, envoyé au commercial */}
+      <AnnulationModal
+        visible={!!commandeAAnnuler}
+        motif={motifAnnulation}
+        onMotifChange={setMotifAnnulation}
+        onConfirm={confirmerAnnulation}
+        onClose={() => { if (!annulationEnCours) setCommandeAAnnuler(null); }}
+        theme={theme}
       />
     </View>
   );
@@ -316,6 +294,9 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginVertical: 10 },
   label: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
   produit: { fontSize: 13, paddingVertical: 2 },
+  motifBox: { borderRadius: 10, padding: 10, marginTop: 10 },
+  motifLabel: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
+  motifText: { fontSize: 13 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { fontSize: 14, fontWeight: '600' },
   totalValue: { fontSize: 16, fontWeight: 'bold' },
@@ -330,7 +311,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   annulerText: { fontSize: 13, fontWeight: '600' },
-  // Nouveaux styles pour les boutons d'action
   actionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

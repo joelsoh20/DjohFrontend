@@ -3,7 +3,7 @@ import { Alert, Platform } from 'react-native';
 //import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { exportService } from '../services/exportService';
-import { documentDirectory, downloadAsync } from 'expo-file-system';
+import { documentDirectory, downloadAsync } from 'expo-file-system/legacy';
 
 interface UseExportsReturn {
   loadingFEC: boolean;

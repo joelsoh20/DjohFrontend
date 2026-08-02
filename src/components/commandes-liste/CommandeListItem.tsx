@@ -21,6 +21,8 @@ export const CommandeListItem: React.FC<CommandeListItemProps> = ({ commande, on
     switch (statut) {
       case 'recue':
         return { label: t('commande.statutRecue'), color: theme.statusRecue, bg: theme.warningLight };
+      case 'validee':
+        return { label: t('commande.statutValidee'), color: theme.statusRecue, bg: theme.warningLight };
       case 'livree_payee':
         return { label: t('commande.statutLivree'), color: theme.statusLivree, bg: theme.secondaryLight };
       case 'annulee':
@@ -29,7 +31,11 @@ export const CommandeListItem: React.FC<CommandeListItemProps> = ({ commande, on
   };
 
   const statutConfig = getStatutConfig(commande.statut);
-  const montantTotal = (commande.prix_unitaire_reel || 0) * (commande.quantite || 1);
+  const lignes = commande.lignes || [];
+  const montantTotal = commande.prix_total ?? lignes.reduce((s, l) => s + Number(l.prix_unitaire_reel) * l.quantite, 0);
+  const produitLabel = lignes.length === 1
+    ? `${lignes[0].produit?.nom || '-'} x${lignes[0].quantite}`
+    : `${lignes.length} produits`;
 
   return (
     <TouchableOpacity
@@ -68,22 +74,14 @@ export const CommandeListItem: React.FC<CommandeListItemProps> = ({ commande, on
         </Text>
       </View>
 
-      {/* Ligne 3 : Produit + Livreur */}
+      {/* Ligne 3 : Produit(s) */}
       <View style={styles.row3}>
         <View style={styles.produitRow}>
           <Ionicons name="cube-outline" size={14} color={theme.textTertiary} />
           <Text style={[styles.produitText, { color: theme.textSecondary }]} numberOfLines={1}>
-            {commande.produit?.nom || '-'} x{commande.quantite}
+            {produitLabel}
           </Text>
         </View>
-        {commande.livreur?.nom && (
-          <View style={styles.livreurRow}>
-            <Ionicons name="bicycle-outline" size={14} color={theme.textTertiary} />
-            <Text style={[styles.livreurText, { color: theme.textSecondary }]} numberOfLines={1}>
-              {commande.livreur.nom}
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Ligne 4 : Commercial */}
