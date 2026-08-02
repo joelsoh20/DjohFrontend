@@ -40,23 +40,66 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
   const [valideesLocales, setValideesLocales] = useState<string[]>([]);
   const [commandesValideesLocales, setCommandesValideesLocales] = useState<Commande[]>([]);
 
-  useEffect(() => {
-    AsyncStorage.getItem('commandesValidees').then(data => {
-      if (data) setCommandesValideesLocales(JSON.parse(data));
-    });
+  // Le cache local ("commandesValidees") garde une commande visible après
+  // un tap sur "Validée" même si le prochain fetch serveur (filtré sur
+  // statut='recue') ne la renverrait plus. Problème : sans vérification,
+  // une entrée reste indéfiniment même si la commande a ensuite été
+  // livrée, ou si sa livraison a été annulée depuis un AUTRE écran (ex:
+  // liste des commandes) — elle continue à s'afficher comme un fantôme
+  // sur CET appareil précis. On revérifie donc son vrai statut serveur
+  // avant de la garder.
+  const reconcilierCacheLocal = React.useCallback(async (cache: Commande[]): Promise<Commande[]> => {
+    if (cache.length === 0) return cache;
+    const verifiees = await Promise.all(cache.map(async (c) => {
+      try {
+        const res = await commandeService.getById(c.id);
+        if (res.success && res.data) {
+          const statutReel = res.data.statut;
+          if (statutReel === 'recue' || statutReel === 'validee') {
+            return { ...c, statut: statutReel };
+          }
+          return null; // livrée, annulée ailleurs, etc. : on retire le fantôme
+        }
+        return null;
+      } catch {
+        return c; // erreur réseau : on garde par précaution, on revérifiera plus tard
+      }
+    }));
+    return verifiees.filter((c): c is Commande => c !== null);
   }, []);
 
-  React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      if (!loading) onRefresh();
+  useEffect(() => {
+    AsyncStorage.getItem('commandesValidees').then(async data => {
+      if (!data) return;
+      const cache = JSON.parse(data);
+      const reconciliees = await reconcilierCacheLocal(cache);
+      setCommandesValideesLocales(reconciliees);
+      await AsyncStorage.setItem('commandesValidees', JSON.stringify(reconciliees));
     });
-    return unsubscribe;
-  }, [navigation, onRefresh, loading]);
+  }, [reconcilierCacheLocal]);
+
+  const commandesValideesLocalesRef = React.useRef<Commande[]>([]);
+  useEffect(() => { commandesValideesLocalesRef.current = commandesValideesLocales; }, [commandesValideesLocales]);
 
   React.useEffect(() => {
-    const interval = setInterval(() => onRefresh(), 30000);
+    const unsubscribe = navigation.addListener('focus', async () => {
+      if (!loading) onRefresh();
+      const reconciliees = await reconcilierCacheLocal(commandesValideesLocalesRef.current);
+      setCommandesValideesLocales(reconciliees);
+      await AsyncStorage.setItem('commandesValidees', JSON.stringify(reconciliees));
+    });
+    return unsubscribe;
+  }, [navigation, onRefresh, loading, reconcilierCacheLocal]);
+
+  React.useEffect(() => {
+    const interval = setInterval(async () => {
+      onRefresh();
+      const reconciliees = await reconcilierCacheLocal(commandesValideesLocalesRef.current);
+      setCommandesValideesLocales(reconciliees);
+      await AsyncStorage.setItem('commandesValidees', JSON.stringify(reconciliees));
+    }, 30000);
     return () => clearInterval(interval);
-  }, [onRefresh]);
+  }, [onRefresh, reconcilierCacheLocal]);
 
   const handleValidee = (item: Commande) => {
     setValideesLocales(prev => [...prev, item.id]);

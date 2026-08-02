@@ -59,7 +59,7 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
     setAnnulationEnCours(true);
     try {
       await commandeService.updateStatut(commandeAAnnuler.id, 'annulee', undefined, undefined, motifAnnulation);
-      Alert.alert('Succès', 'Commande annulée, stock restauré et commercial notifié.');
+      Alert.alert('Succès', 'Livraison annulée : la commande repasse en attente de retraitement, stock restauré et commercial notifié.');
       setCommandeAAnnuler(null);
       setMotifAnnulation('');
       refresh();
@@ -74,6 +74,8 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
     switch (statut) {
       case 'recue':
         return theme.warning;
+      case 'validee':
+        return theme.warning;
       case 'livree_payee':
         return theme.secondary;
       case 'annulee':
@@ -87,6 +89,8 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
     switch (statut) {
       case 'recue':
         return 'En attente';
+      case 'validee':
+        return 'Validée';
       case 'livree_payee':
         return 'Livrée';
       case 'annulee':
@@ -171,7 +175,7 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
                 </Text>
               ))}
 
-              {item.statut === 'annulee' && item.motif_annulation && (
+              {(item.statut === 'annulee' || item.statut === 'validee') && item.motif_annulation && (
                 <View style={[styles.motifBox, { backgroundColor: theme.dangerLight }]}>
                   <Text style={[styles.motifLabel, { color: theme.danger }]}>Motif d'annulation :</Text>
                   <Text style={[styles.motifText, { color: theme.text }]}>{item.motif_annulation}</Text>
@@ -234,7 +238,7 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
                       color={theme.danger}
                     />
                     <Text style={[styles.annulerText, { color: theme.danger }]}>
-                      Annuler
+                      Annuler la livraison
                     </Text>
                   </TouchableOpacity>
                 )}
