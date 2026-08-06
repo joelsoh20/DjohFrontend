@@ -150,9 +150,8 @@ export const useNouvelleCommande = (commandeIdToEdit?: string): UseNouvelleComma
           lignes,
         });
 
-        Alert.alert('Succès', 'Commande modifiée !', [
-          { text: 'OK', onPress: () => resetForm() }
-        ]);
+        resetForm();
+        Alert.alert('Succès', 'Commande modifiée !');
       } else {
         await commandeService.creer({
           client_nom: 'NDJOH AGOGO',
@@ -162,9 +161,8 @@ export const useNouvelleCommande = (commandeIdToEdit?: string): UseNouvelleComma
           lignes,
         });
 
-        Alert.alert('Succès', 'Commande enregistrée !', [
-          { text: 'OK', onPress: () => resetForm() }
-        ]);
+        resetForm();
+        Alert.alert('Succès', 'Commande enregistrée !');
       }
     } catch (err: any) {
       Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
