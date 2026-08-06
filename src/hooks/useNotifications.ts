@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +11,13 @@ export const useNotifications = () => {
 
   useEffect(() => {
     if (!utilisateur) return;
+
+    // Les notifications push Expo ne fonctionnent pas dans un navigateur :
+    // getExpoPushToken() échoue et les listeners natifs n'existent pas.
+    // Sur web, on ne fait donc rien (le reste de l'app fonctionne
+    // normalement). Pour avoir des notifications dans la PWA, il faudra
+    // implémenter l'API Web Push (service worker + VAPID) côté serveur.
+    if (Platform.OS === 'web') return;
 
     const setup = async () => {
   try {

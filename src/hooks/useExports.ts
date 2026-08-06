@@ -20,6 +20,25 @@ export const useExports = (): UseExportsReturn => {
   const [loadingBalance, setLoadingBalance] = useState(false);
 
   const telechargerEtPartager = async (url: string, nomFichier: string) => {
+    // Sur le web, expo-file-system et expo-sharing n'existent pas
+    // (documentDirectory vaut null). Le navigateur sait déjà télécharger :
+    // on déclenche simplement le téléchargement natif.
+    if (Platform.OS === 'web') {
+      try {
+        const lien = document.createElement('a');
+        lien.href = url;
+        lien.download = nomFichier;
+        lien.target = '_blank';
+        lien.rel = 'noopener';
+        document.body.appendChild(lien);
+        lien.click();
+        document.body.removeChild(lien);
+      } catch {
+        Alert.alert('Erreur', 'Impossible de télécharger le fichier');
+      }
+      return;
+    }
+
     try {
       const fileUri = documentDirectory + nomFichier;
       

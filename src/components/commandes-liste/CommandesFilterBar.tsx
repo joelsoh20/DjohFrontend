@@ -30,6 +30,7 @@ export const CommandesFilterBar: React.FC<CommandesFilterBarProps> = ({
   const filters: FilterOption[] = [
     { value: 'tous', labelKey: 'common.all', icon: 'layers', color: theme.primary },
     { value: 'recue', labelKey: 'commande.statutRecue', icon: 'time', color: theme.warning },
+    { value: 'validee', labelKey: 'commande.statutValidee', icon: 'checkmark-circle-outline', color: theme.warning },
     { value: 'livree_payee', labelKey: 'commande.statutLivree', icon: 'checkmark-circle', color: theme.secondary },
     { value: 'annulee', labelKey: 'commande.statutAnnulee', icon: 'close-circle', color: theme.danger },
   ];

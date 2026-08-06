@@ -1,15 +1,14 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, TouchableOpacity, Text, StyleSheet,
   RefreshControl, Alert, ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { useCommandes } from '../../hooks/useCommandes';
-import { Commande, StatutCommande } from '../../types';
+import { Commande } from '../../types';
 import { SearchBar } from '../../components/validation/SearchBar';
 import { EmptyValidation } from '../../components/validation/EmptyValidation';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -37,78 +36,28 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
   const [commandeToAnnuler, setCommandeToAnnuler] = useState<Commande | null>(null);
   const [motifAnnulation, setMotifAnnulation] = useState('');
   const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null);
-  const [valideesLocales, setValideesLocales] = useState<string[]>([]);
-  const [commandesValideesLocales, setCommandesValideesLocales] = useState<Commande[]>([]);
-
-  // Le cache local ("commandesValidees") garde une commande visible après
-  // un tap sur "Validée" même si le prochain fetch serveur (filtré sur
-  // statut='recue') ne la renverrait plus. Problème : sans vérification,
-  // une entrée reste indéfiniment même si la commande a ensuite été
-  // livrée, ou si sa livraison a été annulée depuis un AUTRE écran (ex:
-  // liste des commandes) — elle continue à s'afficher comme un fantôme
-  // sur CET appareil précis. On revérifie donc son vrai statut serveur
-  // avant de la garder.
-  const reconcilierCacheLocal = React.useCallback(async (cache: Commande[]): Promise<Commande[]> => {
-    if (cache.length === 0) return cache;
-    const verifiees = await Promise.all(cache.map(async (c) => {
-      try {
-        const res = await commandeService.getById(c.id);
-        if (res.success && res.data) {
-          const statutReel = res.data.statut;
-          if (statutReel === 'recue' || statutReel === 'validee') {
-            return { ...c, statut: statutReel };
-          }
-          return null; // livrée, annulée ailleurs, etc. : on retire le fantôme
-        }
-        return null;
-      } catch {
-        return c; // erreur réseau : on garde par précaution, on revérifiera plus tard
-      }
-    }));
-    return verifiees.filter((c): c is Commande => c !== null);
-  }, []);
-
-  useEffect(() => {
-    AsyncStorage.getItem('commandesValidees').then(async data => {
-      if (!data) return;
-      const cache = JSON.parse(data);
-      const reconciliees = await reconcilierCacheLocal(cache);
-      setCommandesValideesLocales(reconciliees);
-      await AsyncStorage.setItem('commandesValidees', JSON.stringify(reconciliees));
-    });
-  }, [reconcilierCacheLocal]);
-
-  const commandesValideesLocalesRef = React.useRef<Commande[]>([]);
-  useEffect(() => { commandesValideesLocalesRef.current = commandesValideesLocales; }, [commandesValideesLocales]);
+  const [validationEnCours, setValidationEnCours] = useState(false);
 
   React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', async () => {
+    const unsubscribe = navigation.addListener('focus', () => {
       if (!loading) onRefresh();
-      const reconciliees = await reconcilierCacheLocal(commandesValideesLocalesRef.current);
-      setCommandesValideesLocales(reconciliees);
-      await AsyncStorage.setItem('commandesValidees', JSON.stringify(reconciliees));
     });
     return unsubscribe;
-  }, [navigation, onRefresh, loading, reconcilierCacheLocal]);
+  }, [navigation, onRefresh, loading]);
 
   React.useEffect(() => {
-    const interval = setInterval(async () => {
-      onRefresh();
-      const reconciliees = await reconcilierCacheLocal(commandesValideesLocalesRef.current);
-      setCommandesValideesLocales(reconciliees);
-      await AsyncStorage.setItem('commandesValidees', JSON.stringify(reconciliees));
-    }, 30000);
+    const interval = setInterval(() => onRefresh(), 30000);
     return () => clearInterval(interval);
-  }, [onRefresh, reconcilierCacheLocal]);
+  }, [onRefresh]);
 
-  const handleValidee = (item: Commande) => {
-    setValideesLocales(prev => [...prev, item.id]);
-    const nouvellesValidees = commandesValideesLocales.find(c => c.id === item.id)
-      ? commandesValideesLocales
-      : [...commandesValideesLocales, { ...item, statut: 'validee' as StatutCommande }];
-    setCommandesValideesLocales(nouvellesValidees);
-    AsyncStorage.setItem('commandesValidees', JSON.stringify(nouvellesValidees));
-    commandeService.updateStatut(item.id, 'validee').catch(() => {});
+  const handleValidee = async (item: Commande) => {
+    try {
+      await commandeService.updateStatut(item.id, 'validee');
+      onRefresh();
+    } catch {
+      Alert.alert('Erreur', "Impossible de marquer la commande comme validée");
+      return;
+    }
 
     const lignes = item.lignes || [];
     const produits = lignes.map(l => `📌 ${l.produit?.nom || 'Inconnu'} x${l.quantite}`).join('\n');
@@ -118,13 +67,28 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
   };
 
   const openValidation = (commande: Commande) => {
-    setSelectedCommande(commande);
-    setShowValidation(true);
+    // Confirmation explicite avant de marquer une commande comme livrée
+    Alert.alert(
+      'Commande déjà livrée ?',
+      `Confirmez-vous que la commande de ${commande.client_nom} a bien été livrée ?`,
+      [
+        { text: 'Non', style: 'cancel' },
+        {
+          text: 'Oui, livrée',
+          onPress: () => {
+            setSelectedCommande(commande);
+            setShowValidation(true);
+          }
+        }
+      ]
+    );
   };
 
   const handleServiceSelect = async (serviceId: string) => {
     if (selectedCommande) {
+      setValidationEnCours(true);
       try { await handleValider(selectedCommande.id, fraisChoisi, serviceId); } catch {}
+      setValidationEnCours(false);
     }
     setShowValidation(false);
     setSelectedCommande(null);
@@ -146,25 +110,16 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
     onRefresh();
   };
 
-  // ✅ Tous les hooks sont ici, AVANT tout return conditionnel
-  const toutesCommandes = useMemo(() => {
-    const fusion: Commande[] = [...commandesFiltrees];
-    for (const cmd of commandesValideesLocales) {
-      if (!fusion.find(c => c.id === cmd.id)) {
-        fusion.push(cmd);
-      }
-    }
-    return fusion.sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime());
-  }, [commandesFiltrees, commandesValideesLocales]);
-
-  const enAttente = toutesCommandes.filter(item =>
+  const enAttente = useMemo(() => commandesFiltrees.filter(item =>
     item.statut === 'recue' || item.statut === 'validee'
-  );
-  const validees = toutesCommandes.filter(item =>
-    item.statut === 'livree_payee' || item.statut === 'annulee'
-  );
+  ), [commandesFiltrees]);
 
-  if (loading && commandesFiltrees.length === 0 && commandesValideesLocales.length === 0) {
+  const historique = useMemo(() => commandesFiltrees
+    .filter(item => item.statut === 'livree_payee' || item.statut === 'annulee')
+    .sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime())
+    .slice(0, 30), [commandesFiltrees]);
+
+  if (loading && commandesFiltrees.length === 0) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <LoadingSpinner fullScreen message={t('common.loading')} />
@@ -177,11 +132,11 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
       <SearchBar value={searchText} onChangeText={setSearchText} />
       <TouchableOpacity style={[styles.historyBtn, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => navigation.navigate('ListeCommandes')}>
         <Ionicons name="time-outline" size={20} color={theme.primary} />
-        <Text style={[styles.historyBtnText, { color: theme.primary }]}>Voir l'historique</Text>
+        <Text style={[styles.historyBtnText, { color: theme.primary }]}>Voir l'historique complet</Text>
         <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
       </TouchableOpacity>
 
-      {toutesCommandes.length === 0 ? (
+      {enAttente.length === 0 && historique.length === 0 ? (
         <EmptyValidation hasSearchText={searchText.length > 0} />
       ) : (
         <ScrollView
@@ -202,7 +157,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
                 key={item.id}
                 item={item}
                 theme={theme}
-                estVert={valideesLocales.includes(item.id) || item.statut === 'validee'}
+                estVert={item.statut === 'validee'}
                 onValidee={handleValidee}
                 onAnnulerGroupe={handleAnnulerGroupe}
                 onOpenValidation={openValidation}
@@ -211,18 +166,18 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
             ))
           )}
 
-          {validees.length > 0 && (
+          {historique.length > 0 && (
             <>
               <View style={[styles.sectionHeader, { backgroundColor: theme.secondaryLight, marginTop: 8 }]}>
                 <Ionicons name="checkmark-done-outline" size={18} color={theme.secondary} />
-                <Text style={[styles.sectionTitle, { color: theme.secondary }]}>Historique ({validees.length})</Text>
+                <Text style={[styles.sectionTitle, { color: theme.secondary }]}>Historique récent ({historique.length})</Text>
               </View>
-              {validees.map(item => (
+              {historique.map(item => (
                 <CommandeValidationCard
                   key={item.id}
                   item={item}
                   theme={theme}
-                  estVert={true}
+                  estVert={item.statut === 'livree_payee'}
                   onValidee={handleValidee}
                   onAnnulerGroupe={handleAnnulerGroupe}
                   onOpenValidation={openValidation}

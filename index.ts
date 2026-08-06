@@ -2,6 +2,10 @@
 import { registerRootComponent } from 'expo';
 
 import App from './App';
+import { registerServiceWorker } from './src/services/registerServiceWorker';
+
+// Active la PWA côté web (sans effet sur mobile)
+registerServiceWorker();
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,

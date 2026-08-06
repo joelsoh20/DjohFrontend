@@ -26,7 +26,17 @@
       "package": "com.ndjohagogo.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "NDJOH AGOGO",
+      "shortName": "NDJOH",
+      "themeColor": "#1A73E8",
+      "backgroundColor": "#FFFFFF",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/",
+      "lang": "fr"
     },
     "plugins": [
       "expo-secure-store",

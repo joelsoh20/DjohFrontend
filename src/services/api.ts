@@ -1,15 +1,27 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import { secureStorage } from './secureStorage';
 
 // URL du backend
-// En développement : adresse IP de votre PC sur le réseau local
-// En production : URL de votre serveur déployé
+// - Web testé en local (npm run serve:web / expo start --web) : backend
+//   local sur localhost:5000
+// - Mobile en développement : adresse IP de votre PC sur le réseau local
+// - Production (web déployé ou app mobile publiée) : serveur Render
 const getBaseUrl = (): string => {
+  // Web servi depuis localhost (build local ou "expo start --web") :
+  // on suppose que le backend tourne aussi en local, sur le port 5000.
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const { hostname } = window.location;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:5000/api';
+    }
+  }
+
   if (__DEV__) {
-    // Pendant le développement, on utilise aussi le backend Render
+    // Pendant le développement mobile, on utilise l'IP locale du PC
     return 'http://192.168.1.107:5000/api'; //  192.168.6.180 OU 192.168.1.148, 192.168.43.112 ou 192.168.56.1 lorque je suis hors reseau ← Remplacez par votre IP
   }
-  // En production
+  // En production (web déployé ou app mobile publiée)
   return 'https://backenddjoh-1.onrender.com/api';
 };
 
@@ -27,7 +39,7 @@ const api = axios.create({
 
 // Ajouter automatiquement le token JWT
 api.interceptors.request.use(async (config) => {
-  const token = await SecureStore.getItemAsync('authToken');
+  const token = await secureStorage.getItem('authToken');
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -49,8 +61,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('authToken');
-      await SecureStore.deleteItemAsync('userData');
+      await secureStorage.removeItem('authToken');
+      await secureStorage.removeItem('userData');
     }
 
     return Promise.reject(error);

@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { commandeService } from '../services/commandeService';
-import { Commande, StatutCommande } from '../types';
+import { Commande } from '../types';
 
 interface UseCommandesOptions {
-  statut?: StatutCommande;
   limit?: number;
 }
 
@@ -25,8 +24,17 @@ interface UseCommandesReturn {
   commandesFiltrees: Commande[];
 }
 
+/**
+ * Récupère TOUTES les commandes (statut='tous') plutôt que de se limiter
+ * à statut='recue' — indispensable pour que "en attente" (recue+validee)
+ * et "historique" (livree_payee+annulee) reflètent le vrai état serveur.
+ * Après toute action, on recharge depuis le serveur (refresh) au lieu de
+ * retirer l'élément localement — sinon une commande dont le nouveau
+ * statut n'est pas celui attendu (ex: une livraison annulée qui repart
+ * en "validée" et non en "annulée") disparaît à tort de l'écran.
+ */
 export const useCommandes = (options: UseCommandesOptions = {}): UseCommandesReturn => {
-  const { statut = 'recue', limit = 100 } = options;
+  const { limit = 100 } = options;
 
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +50,7 @@ export const useCommandes = (options: UseCommandesOptions = {}): UseCommandesRet
     setError(null);
 
     try {
-      const response = await commandeService.getAll({ statut, limit });
+      const response = await commandeService.getAll({ statut: 'tous', limit });
       if (response.success && response.data) {
         const data = response.data.items || response.data.commandes || [];
         setCommandes(Array.isArray(data) ? data : []);
@@ -55,7 +63,7 @@ export const useCommandes = (options: UseCommandesOptions = {}): UseCommandesRet
       setLoading(false);
       setRefreshing(false);
     }
-  }, [statut, limit]);
+  }, [limit]);
 
   useEffect(() => { chargerCommandes(); }, [chargerCommandes]);
 
@@ -63,42 +71,43 @@ export const useCommandes = (options: UseCommandesOptions = {}): UseCommandesRet
   const onRefresh = useCallback(() => chargerCommandes(true), [chargerCommandes]);
 
   const handleValider = useCallback(async (id: string, fraisLivraison: number = 1000, serviceId?: string) => {
-  setActionLoading(id);
-  try {
-    await commandeService.updateStatut(id, 'livree_payee', fraisLivraison, serviceId);
-    setCommandes(prev => prev.filter(c => c.id !== id));
-  } catch (err: any) {
-    Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
-    throw err;
-  } finally {
-    setActionLoading(null);
-  }
-}, []);
+    setActionLoading(id);
+    try {
+      await commandeService.updateStatut(id, 'livree_payee', fraisLivraison, serviceId);
+      await chargerCommandes();
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+      throw err;
+    } finally {
+      setActionLoading(null);
+    }
+  }, [chargerCommandes]);
 
   const handleAnnuler = useCallback((id: string, motif?: string) => {
-  Alert.alert(
-    'Annuler la commande',
-    'Confirmer l\'annulation ?',
-    [
-      { text: 'Non', style: 'cancel' },
-      {
-        text: 'Oui, annuler',
-        style: 'destructive',
-        onPress: async () => {
-          setActionLoading(id);
-          try {
-            await commandeService.updateStatut(id, 'annulee', undefined, undefined, motif);
-            setCommandes(prev => prev.filter(c => c.id !== id));
-          } catch (err: any) {
-            Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
-          } finally {
-            setActionLoading(null);
+    Alert.alert(
+      'Annuler la commande',
+      'Confirmer l\'annulation ?',
+      [
+        { text: 'Non', style: 'cancel' },
+        {
+          text: 'Oui, annuler',
+          style: 'destructive',
+          onPress: async () => {
+            setActionLoading(id);
+            try {
+              await commandeService.updateStatut(id, 'annulee', undefined, undefined, motif);
+              await chargerCommandes();
+            } catch (err: any) {
+              Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+            } finally {
+              setActionLoading(null);
+            }
           }
         }
-      }
-    ]
-  );
-}, []);
+      ]
+    );
+  }, [chargerCommandes]);
+
   const handleValiderGroupe = useCallback(async (ids: string[]) => {
     setValidateAllLoading(true);
     let successCount = 0;
@@ -119,23 +128,23 @@ export const useCommandes = (options: UseCommandesOptions = {}): UseCommandesRet
   }, [chargerCommandes]);
 
   const commandesFiltrees = useMemo(() => {
-  const search = (searchText || '').toLowerCase().trim();
-  if (!search) return commandes;
-  return commandes.filter(cmd => {
-    const clientNom = (cmd.client_nom || '').toLowerCase();
-    const id = (cmd.id || '').toLowerCase();
-    const telephone = (cmd.client_telephone || '').toLowerCase();
-    const quartier = (cmd.client_quartier || '').toLowerCase();
-    const produitNom = (cmd.lignes || []).map(l => l.produit?.nom || '').join(' ').toLowerCase();
-    return (
-      clientNom.includes(search) ||
-      id.includes(search) ||
-      telephone.includes(search) ||
-      quartier.includes(search) ||
-      produitNom.includes(search)
-    );
-  });
-}, [commandes, searchText]);
+    const search = (searchText || '').toLowerCase().trim();
+    if (!search) return commandes;
+    return commandes.filter(cmd => {
+      const clientNom = (cmd.client_nom || '').toLowerCase();
+      const id = (cmd.id || '').toLowerCase();
+      const telephone = (cmd.client_telephone || '').toLowerCase();
+      const quartier = (cmd.client_quartier || '').toLowerCase();
+      const produitNom = (cmd.lignes || []).map(l => l.produit?.nom || '').join(' ').toLowerCase();
+      return (
+        clientNom.includes(search) ||
+        id.includes(search) ||
+        telephone.includes(search) ||
+        quartier.includes(search) ||
+        produitNom.includes(search)
+      );
+    });
+  }, [commandes, searchText]);
 
   return {
     commandes, loading, refreshing, error,

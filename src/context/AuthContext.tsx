@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../services/secureStorage';
 import { Utilisateur } from '../types';
 import api from '../services/api';
 
@@ -27,8 +27,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const chargerSession = async () => {
     try {
-      const tokenStocke = await SecureStore.getItemAsync('authToken');
-      const userStocke = await SecureStore.getItemAsync('userData');
+      const tokenStocke = await secureStorage.getItem('authToken');
+      const userStocke = await secureStorage.getItem('userData');
 
       if (tokenStocke && userStocke) {
         setToken(tokenStocke);
@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const response = await api.get('/auth/me');
           if (response.data?.success && response.data?.data) {
             setUtilisateur(response.data.data);
-            await SecureStore.setItemAsync('userData', JSON.stringify(response.data.data));
+            await secureStorage.setItem('userData', JSON.stringify(response.data.data));
           }
         } catch {
           await cleanSession();
@@ -53,8 +53,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const cleanSession = async () => {
-    await SecureStore.deleteItemAsync('authToken');
-    await SecureStore.deleteItemAsync('userData');
+    await secureStorage.removeItem('authToken');
+    await secureStorage.removeItem('userData');
     setToken(null);
     setUtilisateur(null);
   };
@@ -64,8 +64,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   if (response.data?.success && response.data?.data) {
     const { token: newToken, utilisateur: user } = response.data.data;
-    await SecureStore.setItemAsync('authToken', newToken);
-    await SecureStore.setItemAsync('userData', JSON.stringify(user));
+    await secureStorage.setItem('authToken', newToken);
+    await secureStorage.setItem('userData', JSON.stringify(user));
     setToken(newToken);
     setUtilisateur(user);
   } else {
@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await api.get('/auth/me');
       if (response.data?.success && response.data?.data) {
         setUtilisateur(response.data.data);
-        await SecureStore.setItemAsync('userData', JSON.stringify(response.data.data));
+        await secureStorage.setItem('userData', JSON.stringify(response.data.data));
       }
     } catch {}
   };
