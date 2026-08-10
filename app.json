@@ -23,7 +23,8 @@
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.ndjohagogo.app"
+      "package": "com.ndjohagogo.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png",

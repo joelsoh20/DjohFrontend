@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "386612060886",
+    "project_id": "ndojhagogo",
+    "storage_bucket": "ndojhagogo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:386612060886:android:c3712443a82cbbaba1df77",
+        "android_client_info": {
+          "package_name": "com.ndjohagogo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4iebCpIkKt0L-6yxvJRE-wxRcXjtF3Ak"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
