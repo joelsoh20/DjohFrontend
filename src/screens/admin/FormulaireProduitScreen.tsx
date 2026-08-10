@@ -1,6 +1,6 @@
 // Écran formulaire (création/modification)
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -26,7 +26,10 @@ export const FormulaireProduitScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.divider }]}>
         <Ionicons name={isEdit ? 'create' : 'cube'} size={24} color={theme.primary} />
         <Text style={[styles.title, { color: theme.text }]}>
@@ -43,7 +46,7 @@ export const FormulaireProduitScreen: React.FC = () => {
         updateField={updateField}
         handleSubmit={onSubmit}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

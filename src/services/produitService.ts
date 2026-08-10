@@ -24,5 +24,10 @@ export const produitService = {
   toggleActif: async (id: string) => {
     const response = await api.patch(`/produits/${id}/toggle-actif`);
     return response.data;
+  },
+
+  supprimer: async (id: string) => {
+    const response = await api.delete(`/produits/${id}`);
+    return response.data;
   }
 };

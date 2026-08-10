@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useNouvelleCommande } from '../../hooks/useNouvelleCommande';
@@ -35,6 +35,10 @@ export const NouvelleCommandeScreen: React.FC<{ navigation: any; route?: any }> 
   }
 
   return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
@@ -104,6 +108,7 @@ export const NouvelleCommandeScreen: React.FC<{ navigation: any; route?: any }> 
       />
       <View style={{ height: 40 }} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

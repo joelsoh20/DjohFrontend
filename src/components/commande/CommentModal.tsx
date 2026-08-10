@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, TextInput, Alert,
-  ScrollView, StyleSheet,
+  ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -57,7 +57,12 @@ export const CommentModal: React.FC<CommentModalProps> = ({ visible, onClose, or
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      {/* Remonte la zone de saisie au-dessus du clavier (sinon le champ
+          "Votre message" est recouvert et on tape sans se relire). */}
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={[styles.content, { backgroundColor: theme.surface }]}>
           <Text style={[styles.title, { color: theme.text }]}>💬 Discussion</Text>
           <ScrollView style={{ maxHeight: 250 }}>
@@ -96,7 +101,7 @@ export const CommentModal: React.FC<CommentModalProps> = ({ visible, onClose, or
             <Text style={{ color: theme.textSecondary }}>Fermer</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

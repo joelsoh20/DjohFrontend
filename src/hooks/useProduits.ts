@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { produitService } from '../services/produitService';
+import { confirmer, informer } from '../utils/confirmer';
 import { Produit } from '../types';
 
 interface UseProduitsReturn {
@@ -16,6 +17,7 @@ interface UseProduitsReturn {
   refresh: () => void;
   onRefresh: () => void;
   handleToggleActif: (id: string, nom: string, actif: boolean) => void;
+  handleSupprimer: (id: string, nom: string) => void;
 }
 
 export const useProduits = (): UseProduitsReturn => {
@@ -49,27 +51,43 @@ export const useProduits = (): UseProduitsReturn => {
   const refresh = useCallback(() => chargerProduits(false), [chargerProduits]);
   const onRefresh = useCallback(() => chargerProduits(true), [chargerProduits]);
 
-  const handleToggleActif = useCallback((id: string, nom: string, actif: boolean) => {
-    const action = actif ? 'désactiver' : 'activer';
-    Alert.alert(
-      `${actif ? 'Désactiver' : 'Activer'} le produit ?`,
+  // confirmer() remplace Alert.alert : sur le web, les callbacks onPress
+  // des boutons d'Alert.alert ne se déclenchent pas — le bouton semblait
+  // donc ne rien faire.
+  const handleToggleActif = useCallback(async (id: string, nom: string, actif: boolean) => {
+    const action = actif ? 'masquer' : 'activer';
+    const ok = await confirmer(
+      `${actif ? 'Masquer' : 'Activer'} le produit ?`,
       `Voulez-vous vraiment ${action} "${nom}" ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Confirmer',
-          style: actif ? 'destructive' : 'default',
-          onPress: async () => {
-            try {
-              await produitService.toggleActif(id);
-              setProduits(prev => prev.map(p => p.id === id ? { ...p, actif: !p.actif } : p));
-            } catch (err: any) {
-              Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
-            }
-          },
-        },
-      ]
+      'Confirmer',
+      actif
     );
+    if (!ok) return;
+
+    try {
+      await produitService.toggleActif(id);
+      setProduits(prev => prev.map(p => p.id === id ? { ...p, actif: !p.actif } : p));
+    } catch (err: any) {
+      informer('Erreur', err.response?.data?.message || 'Erreur');
+    }
+  }, []);
+
+  const handleSupprimer = useCallback(async (id: string, nom: string) => {
+    const ok = await confirmer(
+      'Supprimer le produit ?',
+      `"${nom}" sera définitivement supprimé. Cette action est irréversible.`,
+      'Supprimer',
+      true
+    );
+    if (!ok) return;
+
+    try {
+      await produitService.supprimer(id);
+      setProduits(prev => prev.filter(p => p.id !== id));
+      informer('Succès', 'Produit supprimé');
+    } catch (err: any) {
+      informer('Suppression impossible', err.response?.data?.message || 'Erreur');
+    }
   }, []);
 
   const produitsFiltres = useMemo(() => {
@@ -93,5 +111,6 @@ export const useProduits = (): UseProduitsReturn => {
     produitsFiltres,
     refresh, onRefresh,
     handleToggleActif,
+    handleSupprimer,
   };
 };

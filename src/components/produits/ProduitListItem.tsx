@@ -10,9 +10,10 @@ interface ProduitListItemProps {
   produit: Produit;
   onPress: (produit: Produit) => void;
   onToggleActif?: (id: string, nom: string, actif: boolean) => void;
+  onSupprimer?: (id: string, nom: string) => void;
 }
 
-export const ProduitListItem: React.FC<ProduitListItemProps> = ({ produit, onPress, onToggleActif }) => {
+export const ProduitListItem: React.FC<ProduitListItemProps> = ({ produit, onPress, onToggleActif, onSupprimer }) => {
   const { theme } = useTheme();
 
   const marge = produit.prix_catalogue && produit.cout_revient
@@ -69,17 +70,31 @@ export const ProduitListItem: React.FC<ProduitListItemProps> = ({ produit, onPre
         </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.toggleButton, { backgroundColor: produit.actif ? theme.dangerLight : theme.secondaryLight }]}
-        onPress={() => onToggleActif && onToggleActif(produit.id, produit.nom, produit.actif)}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Ionicons
-          name={produit.actif ? 'eye-off-outline' : 'eye-outline'}
-          size={20}
-          color={produit.actif ? theme.danger : theme.secondary}
-        />
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        {onToggleActif && (
+          <TouchableOpacity
+            style={[styles.toggleButton, { backgroundColor: produit.actif ? theme.dangerLight : theme.secondaryLight }]}
+            onPress={() => onToggleActif(produit.id, produit.nom, produit.actif)}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+          >
+            <Ionicons
+              name={produit.actif ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={produit.actif ? theme.danger : theme.secondary}
+            />
+          </TouchableOpacity>
+        )}
+
+        {onSupprimer && (
+          <TouchableOpacity
+            style={[styles.toggleButton, { backgroundColor: theme.dangerLight }]}
+            onPress={() => onSupprimer(produit.id, produit.nom)}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+          >
+            <Ionicons name="trash-outline" size={20} color={theme.danger} />
+          </TouchableOpacity>
+        )}
+      </View>
     </TouchableOpacity>
   );
 };
@@ -114,8 +129,9 @@ const styles = StyleSheet.create({
   separator: { fontSize: 12 },
   cost: { fontSize: 13 },
   marge: { fontSize: 12, fontWeight: '600', marginTop: 3 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 8 },
   toggleButton: {
     width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center', marginLeft: 8,
+    alignItems: 'center', justifyContent: 'center',
   },
 });

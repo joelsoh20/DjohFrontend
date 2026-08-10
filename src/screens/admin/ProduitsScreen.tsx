@@ -20,10 +20,10 @@ export const ProduitsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     searchText, setSearchText,
     filterActif, setFilterActif,
     produitsFiltres,
-    onRefresh, handleToggleActif,
+    onRefresh, handleToggleActif, handleSupprimer,
+    refresh,
   } = useProduits();
 
-  const { refresh } = useProduits();
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => refresh());
     return unsubscribe;
@@ -80,6 +80,7 @@ export const ProduitsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             produit={item}
             onPress={(p) => navigation.navigate('FormulaireProduit', { productId: p.id })}
             onToggleActif={isAdmin ? handleToggleActif : undefined}
+            onSupprimer={isAdmin ? handleSupprimer : undefined}
           />
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}

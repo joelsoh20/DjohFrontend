@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -41,7 +41,10 @@ export const FormulaireUtilisateurScreen: React.FC = () => {
 };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.divider }]}>
         <Ionicons name={isEdit ? 'create' : 'person-add'} size={24} color={theme.primary} />
         <Text style={[styles.headerTitle, { color: theme.text }]}>
@@ -63,7 +66,7 @@ export const FormulaireUtilisateurScreen: React.FC = () => {
         addCommissionProduit={addCommissionProduit}
         removeCommissionProduit={removeCommissionProduit}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

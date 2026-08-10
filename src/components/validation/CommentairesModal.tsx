@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { formatDateHeure } from '../../utils/formatDate';
@@ -51,7 +51,11 @@ export const CommentairesModal: React.FC<CommentairesModalProps> = ({ visible, o
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      {/* Remonte la saisie au-dessus du clavier */}
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={[styles.content, { backgroundColor: theme.surface }]}>
           <Text style={[styles.title, { color: theme.text }]}>💬 Commentaires</Text>
           <ScrollView style={{ maxHeight: 250 }}>
@@ -89,7 +93,7 @@ export const CommentairesModal: React.FC<CommentairesModalProps> = ({ visible, o
             <Text style={{ color: theme.textSecondary }}>Fermer</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
