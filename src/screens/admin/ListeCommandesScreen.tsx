@@ -19,6 +19,7 @@ import { CommandesFilterBar } from '../../components/commandes-liste/CommandesFi
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { EmptyState } from '../../components/EmptyState';
 import { AnnulationModal } from '../../components/validation/AnnulationModal';
+import { CorrectionLivraisonModal } from '../../components/commandes-liste/CorrectionLivraisonModal';
 import { formatMonnaie } from '../../utils/formatMonnaie';
 import { formatDateCourte } from '../../utils/formatDate';
 import { commandeService } from '../../services/commandeService';
@@ -53,6 +54,9 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
   const [commandeAAnnuler, setCommandeAAnnuler] = useState<Commande | null>(null);
   const [motifAnnulation, setMotifAnnulation] = useState('');
   const [annulationEnCours, setAnnulationEnCours] = useState(false);
+
+  // État pour la modale de correction (frais/service, sans repasser par l'annulation)
+  const [commandeACorriger, setCommandeACorriger] = useState<Commande | null>(null);
 
   const confirmerAnnulation = async () => {
     if (!commandeAAnnuler) return;
@@ -223,6 +227,19 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
                   </Text>
                 </TouchableOpacity>
 
+                {/* Bouton Corriger (commande livrée — frais/service erronés) */}
+                {peutAnnuler && (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { borderColor: theme.primary }]}
+                    onPress={() => setCommandeACorriger(item)}
+                  >
+                    <Ionicons name="build-outline" size={14} color={theme.primary} />
+                    <Text style={[styles.actionBtnText, { color: theme.primary }]}>
+                      Corriger
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
                 {/* Bouton Annuler (commande livrée — corrige une erreur) */}
                 {peutAnnuler && (
                   <TouchableOpacity
@@ -279,6 +296,15 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
         onConfirm={confirmerAnnulation}
         onClose={() => { if (!annulationEnCours) setCommandeAAnnuler(null); }}
         theme={theme}
+      />
+
+      {/* Modale de correction (frais/service erronés, sans repasser par l'annulation) */}
+      <CorrectionLivraisonModal
+        visible={!!commandeACorriger}
+        onClose={() => setCommandeACorriger(null)}
+        commande={commandeACorriger}
+        theme={theme}
+        onCorrige={refresh}
       />
     </View>
   );

@@ -8,6 +8,7 @@ import { produitService } from '../../services/produitService';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { StockMouvementsModal } from '../../components/stock/StockMouvementsModal';
 
 export const StockScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -18,6 +19,7 @@ export const StockScreen: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [quantite, setQuantite] = useState('');
   const [loadingSubmit, setLoadingSubmit] = useState(false);
+  const [historiqueProduit, setHistoriqueProduit] = useState<{ id: string; nom: string } | null>(null);
 
   const isManager = utilisateur?.role === 'manager';
   const canEdit = isAdmin || isManager;
@@ -92,16 +94,32 @@ export const StockScreen: React.FC = () => {
         data={stocks}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={[styles.stockItem, { backgroundColor: theme.surface }]}>
+          <TouchableOpacity
+            style={[styles.stockItem, { backgroundColor: theme.surface }]}
+            onPress={() => setHistoriqueProduit({ id: item.product_id, nom: item.produit?.nom || 'Inconnu' })}
+          >
             <View>
               <Text style={[styles.stockName, { color: theme.text }]}>{item.produit?.nom || 'Inconnu'}</Text>
+              <Text style={[styles.stockHint, { color: theme.textTertiary }]}>Voir l'historique</Text>
             </View>
-            <Text style={[styles.stockQty, { color: item.quantite > 0 ? theme.secondary : theme.danger }]}>
-              {item.quantite} en stock
-            </Text>
-          </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={[styles.stockQty, { color: item.quantite > 0 ? theme.secondary : theme.danger }]}>
+                {item.quantite} en stock
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+            </View>
+          </TouchableOpacity>
         )}
         contentContainerStyle={{ padding: 16 }}
+      />
+
+      <StockMouvementsModal
+        visible={!!historiqueProduit}
+        onClose={() => setHistoriqueProduit(null)}
+        productId={historiqueProduit?.id || null}
+        produitNom={historiqueProduit?.nom || ''}
+        theme={theme}
+        onCorrige={charger}
       />
     </View>
   );
@@ -116,5 +134,6 @@ const styles = StyleSheet.create({
   productChipText: { fontSize: 13, fontWeight: '500' },
   stockItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 10, marginBottom: 8 },
   stockName: { fontSize: 14, fontWeight: '600' },
+  stockHint: { fontSize: 11, marginTop: 2 },
   stockQty: { fontSize: 16, fontWeight: 'bold' },
 });

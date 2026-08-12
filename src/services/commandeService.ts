@@ -31,6 +31,11 @@ export const commandeService = {
     return response.data;
   },
 
+  corrigerLivraison: async (id: string, data: { frais_livraison?: number; service_livraison_id?: string | null }) => {
+    const response = await api.patch(`/commandes/${id}/corriger-livraison`, data);
+    return response.data;
+  },
+
   getMonDashboard: async () => {
   const response = await api.get('/commandes/mon-dashboard', {
     params: { _t: Date.now() }
