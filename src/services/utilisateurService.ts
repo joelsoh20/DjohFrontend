@@ -51,5 +51,15 @@ export const utilisateurService = {
   removeCommissionProduit: async (userId: string, productId: string) => {
     const response = await api.delete(`/utilisateurs/${userId}/commissions-produits/${productId}`);
     return response.data;
+  },
+
+  addBonusPalier: async (userId: string, nombreCommandes: number, montant: number) => {
+    const response = await api.post(`/utilisateurs/${userId}/bonus-paliers`, { nombre_commandes: nombreCommandes, montant });
+    return response.data;
+  },
+
+  removeBonusPalier: async (userId: string, palierId: string) => {
+    const response = await api.delete(`/utilisateurs/${userId}/bonus-paliers/${palierId}`);
+    return response.data;
   }
 };

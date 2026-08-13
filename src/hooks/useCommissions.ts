@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { utilisateurService } from '../services/utilisateurService';
 import { produitService } from '../services/produitService';
-import { Utilisateur, Produit, ProductCommission, CommissionMode } from '../types';
+import { Utilisateur, Produit, ProductCommission, CommissionMode, BonusPalier } from '../types';
 
 interface UseCommissionsReturn {
   commerciaux: Utilisateur[];
@@ -14,10 +14,13 @@ interface UseCommissionsReturn {
   selectedCommercial: Utilisateur | null;
   selectCommercial: (user: Utilisateur | null) => void;
   commissionsProduits: ProductCommission[];
+  bonusPaliers: BonusPalier[];
   updateCommissionMode: (userId: string, mode: CommissionMode) => Promise<void>;
   updateCommissionDefaut: (userId: string, montant: number) => Promise<void>;
   addCommissionProduit: (userId: string, productId: string, montant: number) => Promise<void>;
   removeCommissionProduit: (userId: string, productId: string) => Promise<void>;
+  addBonusPalier: (userId: string, nombreCommandes: number, montant: number) => Promise<void>;
+  removeBonusPalier: (userId: string, palierId: string) => Promise<void>;
   refresh: () => void;
 }
 
@@ -28,6 +31,7 @@ export const useCommissions = (): UseCommissionsReturn => {
   const [loading, setLoading] = useState(true);
   const [selectedCommercial, setSelectedCommercial] = useState<Utilisateur | null>(null);
   const [commissionsProduits, setCommissionsProduits] = useState<ProductCommission[]>([]);
+  const [bonusPaliers, setBonusPaliers] = useState<BonusPalier[]>([]);
 
   const chargerDonnees = useCallback(async () => {
     setLoading(true);
@@ -90,11 +94,8 @@ export const useCommissions = (): UseCommissionsReturn => {
 
   const selectCommercial = useCallback((user: Utilisateur | null) => {
     setSelectedCommercial(user);
-    if (user?.commissions_produits) {
-      setCommissionsProduits(user.commissions_produits);
-    } else {
-      setCommissionsProduits([]);
-    }
+    setCommissionsProduits(user?.commissions_produits || []);
+    setBonusPaliers(user?.bonus_paliers || []);
   }, []);
 
   const updateCommissionMode = useCallback(async (userId: string, mode: CommissionMode) => {
@@ -135,13 +136,35 @@ export const useCommissions = (): UseCommissionsReturn => {
     }
   }, [chargerDonnees]);
 
+  const addBonusPalier = useCallback(async (userId: string, nombreCommandes: number, montant: number) => {
+    try {
+      await utilisateurService.addBonusPalier(userId, nombreCommandes, montant);
+      const res = await utilisateurService.getById(userId);
+      if (res.success && res.data) setBonusPaliers(res.data.bonus_paliers || []);
+      await chargerDonnees();
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+    }
+  }, [chargerDonnees]);
+
+  const removeBonusPalier = useCallback(async (userId: string, palierId: string) => {
+    try {
+      await utilisateurService.removeBonusPalier(userId, palierId);
+      setBonusPaliers(prev => prev.filter(p => p.id !== palierId));
+      await chargerDonnees();
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+    }
+  }, [chargerDonnees]);
+
   return {
     commerciaux, produits, commissionGlobale, loading,
     setCommissionGlobale, updateCommissionGlobale,
     selectedCommercial, selectCommercial,
-    commissionsProduits,
+    commissionsProduits, bonusPaliers,
     updateCommissionMode, updateCommissionDefaut,
     addCommissionProduit, removeCommissionProduit,
+    addBonusPalier, removeBonusPalier,
     refresh,
   };
 };

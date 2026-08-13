@@ -3,10 +3,7 @@ import { Platform } from 'react-native';
 import { secureStorage } from './secureStorage';
 
 // URL du backend
-// - Web testé en local (npm run serve:web / expo start --web) : backend
-//   local sur localhost:5000
-// - Mobile en développement : adresse IP de votre PC sur le réseau local
-// - Production (web déployé ou app mobile publiée) : serveur Render
+
 const getBaseUrl = (): string => {
   // Web servi depuis localhost (build local ou "expo start --web") :
   // on suppose que le backend tourne aussi en local, sur le port 5000.
@@ -22,7 +19,7 @@ const getBaseUrl = (): string => {
     return 'http://192.168.1.107:5000/api'; //  192.168.6.180 OU 192.168.1.148, 192.168.43.112 ou 192.168.56.1 lorque je suis hors reseau ← Remplacez par votre IP
   }
   // En production (web déployé ou app mobile publiée)
-  return 'https://backenddjoh.onrender.com/api';
+  return 'https://https://backenddjoh-1.onrender.com/api';
 };
 
 // const getBaseUrl = (): string => {

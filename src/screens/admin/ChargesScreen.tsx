@@ -22,6 +22,7 @@ export const ChargesScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
     totalCharges,
     resume,
     onRefresh, handleDelete,
+    refresh,
   } = useCharges();
 
   const maintenant = new Date();
@@ -29,7 +30,10 @@ const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
 const chargesMois = charges.filter(c => new Date(c.date) >= debutMois);
 const totalChargesMois = chargesMois.reduce((sum, c) => sum + c.montant, 0);
 
-  const { refresh } = useCharges();
+  // Avant : useCharges() était rappelé ici juste pour "refresh", ce qui
+  // créait une seconde instance d'état séparée de celle affichée — le
+  // rafraîchissement au focus de l'écran (après ajout/édition d'une
+  // charge) n'avait donc aucun effet visible.
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => refresh());
     return unsubscribe;

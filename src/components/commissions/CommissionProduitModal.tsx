@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { Input } from '../Input';
 import { Button } from '../Button';
-import { Produit, ProductCommission, Utilisateur } from '../../types';
+import { BonusConfig } from '../utilisateurs/BonusConfig';
+import { Produit, ProductCommission, Utilisateur, BonusPalier } from '../../types';
 import { formatMonnaie } from '../../utils/formatMonnaie';
 
 interface CommissionProduitModalProps {
@@ -17,14 +18,17 @@ interface CommissionProduitModalProps {
   commercial: Utilisateur | null;
   produits: Produit[];
   commissionsProduits: ProductCommission[];
+  bonusPaliers: BonusPalier[];
   onAdd: (userId: string, productId: string, montant: number) => Promise<void>;
   onRemove: (userId: string, productId: string) => Promise<void>;
   onUpdateDefaut: (userId: string, montant: number) => Promise<void>;
+  onAddBonus: (userId: string, nombreCommandes: number, montant: number) => Promise<void>;
+  onRemoveBonus: (userId: string, palierId: string) => Promise<void>;
 }
 
 export const CommissionProduitModal: React.FC<CommissionProduitModalProps> = ({
-  visible, onClose, commercial, produits, commissionsProduits,
-  onAdd, onRemove, onUpdateDefaut,
+  visible, onClose, commercial, produits, commissionsProduits, bonusPaliers,
+  onAdd, onRemove, onUpdateDefaut, onAddBonus, onRemoveBonus,
 }) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -161,6 +165,12 @@ export const CommissionProduitModal: React.FC<CommissionProduitModalProps> = ({
                 variant="outline"
               />
             )}
+
+            <BonusConfig
+              bonusPaliers={bonusPaliers}
+              onAddPalier={(n, m) => onAddBonus(commercial.id, n, m)}
+              onRemovePalier={(palierId) => onRemoveBonus(commercial.id, palierId)}
+            />
           </ScrollView>
 
           <Text style={[styles.note, { color: theme.textTertiary }]}>

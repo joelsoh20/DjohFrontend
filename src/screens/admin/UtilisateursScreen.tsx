@@ -22,9 +22,13 @@ export const UtilisateursScreen: React.FC<{ navigation: any }> = ({ navigation }
     roleFilter, setRoleFilter,
     utilisateursFiltres,
     onRefresh, handleToggleActif,
+    refresh,
   } = useUtilisateurs();
 
-  const { refresh } = useUtilisateurs();
+  // Avant : useUtilisateurs() était rappelé ici juste pour "refresh", ce
+  // qui créait une seconde instance d'état séparée de celle affichée —
+  // le rafraîchissement au focus de l'écran (après ajout/édition d'un
+  // utilisateur) n'avait donc aucun effet visible.
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => refresh());
     return unsubscribe;

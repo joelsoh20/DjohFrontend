@@ -58,10 +58,12 @@ export const CommentModal: React.FC<CommentModalProps> = ({ visible, onClose, or
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       {/* Remonte la zone de saisie au-dessus du clavier (sinon le champ
-          "Votre message" est recouvert et on tape sans se relire). */}
+          "Votre message" est recouvert et on tape sans se relire).
+          behavior=undefined sur Android ne fait RIEN — 'height' est le
+          comportement qui fonctionne réellement (voir EcranAvecClavier). */}
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={[styles.content, { backgroundColor: theme.surface }]}>
           <Text style={[styles.title, { color: theme.text }]}>💬 Discussion</Text>

@@ -83,6 +83,17 @@ export const CommercialStatsCard: React.FC<CommercialStatsCardProps> = ({ stats 
         ))}
       </View>
 
+      {/* Progression vers le prochain palier de bonus */}
+      {stats.bonusProchainPalier && (
+        <View style={[styles.evolutionCard, { backgroundColor: '#FFF8E1' }]}>
+          <Text style={[styles.evolutionTitle, { color: '#B8860B' }]}>🎯 Prochain bonus</Text>
+          <Text style={{ color: '#8A6D00', fontSize: 13 }}>
+            Plus que {stats.bonusProchainPalier.commandesRestantes} commande(s) pour {formatMonnaie(stats.bonusProchainPalier.montant)} de bonus
+            {' '}({stats.bonusProchainPalier.nombre_commandes} commandes au total ce mois)
+          </Text>
+        </View>
+      )}
+
       {/* Évolution 6 mois */}
       {stats.evolution && stats.evolution.length > 0 && (
         <View style={[styles.evolutionCard, { backgroundColor: theme.surfaceVariant }]}>

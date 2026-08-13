@@ -39,9 +39,14 @@ export const ListeCommandesScreen: React.FC<{ navigation: any; route?: any }> = 
     commandesFiltrees,
     onRefresh,
     loadMore,
+    refresh,
   } = useListeCommandes();
 
-  const { refresh } = useListeCommandes();
+  // Avant : useListeCommandes() était appelé une seconde fois juste pour
+  // récupérer "refresh", créant une instance d'état totalement séparée.
+  // "refresh" agissait alors sur des données jamais affichées à l'écran —
+  // après une correction/annulation ou un retour sur cet écran, la liste
+  // visible (issue de l'appel ci-dessus) ne se rafraîchissait jamais.
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => refresh());
     return unsubscribe;
@@ -75,8 +80,18 @@ export const ListeCommandesScreen: React.FC<{ navigation: any; route?: any }> = 
     if (!commandeAAnnuler) return;
     setAnnulationEnCours(true);
     try {
+      // Le backend distingue déjà les deux cas (voir OrderStatutController) :
+      // une commande LIVRÉE repart en "validée" (le stock est restitué, à
+      // retraiter) tandis qu'une commande "validée"/"reçue" est annulée
+      // définitivement — le message affiché doit refléter lequel s'applique.
+      const etaitLivree = commandeAAnnuler.statut === 'livree_payee';
       await commandeService.updateStatut(commandeAAnnuler.id, 'annulee', undefined, undefined, motifAnnulation);
-      Alert.alert('Succès', 'Livraison annulée : la commande repasse en attente de retraitement, stock restauré et commercial notifié.');
+      Alert.alert(
+        'Succès',
+        etaitLivree
+          ? 'Livraison annulée : la commande repasse en attente de retraitement, stock restauré et commercial notifié.'
+          : 'Commande annulée définitivement.'
+      );
       setCommandeAAnnuler(null);
       setMotifAnnulation('');
       refresh();
@@ -144,6 +159,12 @@ export const ListeCommandesScreen: React.FC<{ navigation: any; route?: any }> = 
           // Admin et manager peuvent annuler une commande livrée à tout
           // moment (pour corriger une erreur) — plus de limite d'1h.
           const peutAnnuler = item.statut === 'livree_payee' && (isAdmin || isManager);
+
+          // Commande validée (donc en cours de livraison, pas encore
+          // marquée livrée) : "Annuler" ici est définitif, pas une
+          // correction — le backend la passe directement à "annulee"
+          // (voir OrderStatutController.updateStatut).
+          const peutAnnulerValidee = item.statut === 'validee' && (isAdmin || isManager);
 
           return (
             <View style={[styles.card, { backgroundColor: theme.surface }]}>
@@ -278,6 +299,28 @@ export const ListeCommandesScreen: React.FC<{ navigation: any; route?: any }> = 
                     />
                     <Text style={[styles.annulerText, { color: theme.danger }]}>
                       Annuler la livraison
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Bouton Annuler (commande validée, pas encore livrée —
+                    annulation définitive, contrairement au cas ci-dessus
+                    qui corrige une livraison déjà faite) */}
+                {peutAnnulerValidee && (
+                  <TouchableOpacity
+                    style={[styles.annulerBtn, { borderColor: theme.danger }]}
+                    onPress={() => {
+                      setMotifAnnulation('');
+                      setCommandeAAnnuler(item);
+                    }}
+                  >
+                    <Ionicons
+                      name="close-circle-outline"
+                      size={18}
+                      color={theme.danger}
+                    />
+                    <Text style={[styles.annulerText, { color: theme.danger }]}>
+                      Annuler la commande
                     </Text>
                   </TouchableOpacity>
                 )}

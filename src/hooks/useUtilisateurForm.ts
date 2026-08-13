@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { utilisateurService } from '../services/utilisateurService';
 import { produitService } from '../services/produitService';
-import { Utilisateur, Role, CommissionMode, Produit, ProductCommission } from '../types';
+import { Utilisateur, Role, CommissionMode, Produit, ProductCommission, BonusPalier } from '../types';
 
 interface FormData {
   nom: string;
@@ -21,12 +21,15 @@ interface UseUtilisateurFormReturn {
   utilisateur: Utilisateur | null;
   produits: Produit[];
   commissionsProduits: ProductCommission[];
+  bonusPaliers: BonusPalier[];
   updateField: (field: string, value: string) => void;
   setCommissionMode: (mode: CommissionMode) => void;
   validateForm: () => boolean;
   handleSubmit: () => Promise<boolean>;
   addCommissionProduit: (productId: string, montant: number) => void;
   removeCommissionProduit: (productId: string) => void;
+  addBonusPalier: (nombreCommandes: number, montant: number) => void;
+  removeBonusPalier: (palierId: string) => void;
 }
 
 const INITIAL_FORM: FormData = {
@@ -47,6 +50,7 @@ export const useUtilisateurForm = (userId?: string): UseUtilisateurFormReturn =>
   const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
   const [produits, setProduits] = useState<Produit[]>([]);
   const [commissionsProduits, setCommissionsProduits] = useState<ProductCommission[]>([]);
+  const [bonusPaliers, setBonusPaliers] = useState<BonusPalier[]>([]);
 
   useEffect(() => {
     const charger = async () => {
@@ -69,6 +73,7 @@ export const useUtilisateurForm = (userId?: string): UseUtilisateurFormReturn =>
               commission_defaut: user.commission_defaut?.toString() || '1000',
             });
             setCommissionsProduits(user.commissions_produits || []);
+            setBonusPaliers(user.bonus_paliers || []);
           }
         }
       } catch (err) {
@@ -135,22 +140,58 @@ const handleSubmit = useCallback(async (): Promise<boolean> => {
     setLoadingSubmit(false);
   }
 }, [formData, isEdit, userId, validateForm]);
-  const addCommissionProduit = useCallback((productId: string, montant: number) => {
-    setCommissionsProduits(prev => {
-      const existing = prev.find(c => c.product_id === productId);
-      if (existing) return prev.map(c => c.product_id === productId ? { ...c, montant } : c);
-      return [...prev, { id: '', user_id: userId || '', product_id: productId, montant }];
-    });
-  }, [userId]);
+  // Persistées immédiatement (pas seulement en état local) : avant, ces
+  // deux fonctions se contentaient de modifier commissionsProduits en
+  // mémoire sans jamais appeler l'API, et handleSubmit n'envoyait pas non
+  // plus ce tableau — configurer une commission par produit ici semblait
+  // fonctionner à l'écran mais n'était jamais enregistré en base.
+  const addCommissionProduit = useCallback(async (productId: string, montant: number) => {
+    if (!isEdit || !userId) return;
+    try {
+      await utilisateurService.addCommissionProduit(userId, productId, montant);
+      const res = await utilisateurService.getById(userId);
+      if (res.success && res.data) setCommissionsProduits(res.data.commissions_produits || []);
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Erreur lors de l\'enregistrement de la commission');
+    }
+  }, [isEdit, userId]);
 
-  const removeCommissionProduit = useCallback((productId: string) => {
-    setCommissionsProduits(prev => prev.filter(c => c.product_id !== productId));
-  }, []);
+  const removeCommissionProduit = useCallback(async (productId: string) => {
+    if (!isEdit || !userId) return;
+    try {
+      await utilisateurService.removeCommissionProduit(userId, productId);
+      setCommissionsProduits(prev => prev.filter(c => c.product_id !== productId));
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Erreur lors de la suppression de la commission');
+    }
+  }, [isEdit, userId]);
+
+  const addBonusPalier = useCallback(async (nombreCommandes: number, montant: number) => {
+    if (!isEdit || !userId) return;
+    try {
+      await utilisateurService.addBonusPalier(userId, nombreCommandes, montant);
+      const res = await utilisateurService.getById(userId);
+      if (res.success && res.data) setBonusPaliers(res.data.bonus_paliers || []);
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Erreur lors de l\'enregistrement du palier');
+    }
+  }, [isEdit, userId]);
+
+  const removeBonusPalier = useCallback(async (palierId: string) => {
+    if (!isEdit || !userId) return;
+    try {
+      await utilisateurService.removeBonusPalier(userId, palierId);
+      setBonusPaliers(prev => prev.filter(p => p.id !== palierId));
+    } catch (err: any) {
+      Alert.alert('Erreur', err.response?.data?.message || 'Erreur lors de la suppression du palier');
+    }
+  }, [isEdit, userId]);
 
   return {
     formData, errors, loading, loadingSubmit, isEdit, utilisateur,
-    produits, commissionsProduits,
+    produits, commissionsProduits, bonusPaliers,
     updateField, setCommissionMode, validateForm, handleSubmit,
     addCommissionProduit, removeCommissionProduit,
+    addBonusPalier, removeBonusPalier,
   };
 };

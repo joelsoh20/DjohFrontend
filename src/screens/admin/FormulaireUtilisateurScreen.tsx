@@ -18,9 +18,10 @@ export const FormulaireUtilisateurScreen: React.FC = () => {
 
   const {
     formData, errors, loading, loadingSubmit, isEdit,
-    produits, commissionsProduits,
+    produits, commissionsProduits, bonusPaliers,
     updateField, setCommissionMode, handleSubmit,
     addCommissionProduit, removeCommissionProduit,
+    addBonusPalier, removeBonusPalier,
   } = useUtilisateurForm(userId);
 
   if (!isAdmin) {
@@ -60,11 +61,14 @@ export const FormulaireUtilisateurScreen: React.FC = () => {
         isEdit={isEdit}
         produits={produits}
         commissionsProduits={commissionsProduits}
+        bonusPaliers={bonusPaliers}
         updateField={updateField}
         setCommissionMode={setCommissionMode}
         handleSubmit={onSubmit}
         addCommissionProduit={addCommissionProduit}
         removeCommissionProduit={removeCommissionProduit}
+        addBonusPalier={addBonusPalier}
+        removeBonusPalier={removeBonusPalier}
       />
     </KeyboardAvoidingView>
   );

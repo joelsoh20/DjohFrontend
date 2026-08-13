@@ -20,9 +20,10 @@ export const CommissionsScreen: React.FC = () => {
     commerciaux, produits, commissionGlobale, loading,
     setCommissionGlobale, updateCommissionGlobale,
     selectedCommercial, selectCommercial,
-    commissionsProduits,
+    commissionsProduits, bonusPaliers,
     updateCommissionMode,
     addCommissionProduit, removeCommissionProduit,
+    addBonusPalier, removeBonusPalier,
     updateCommissionDefaut,
   } = useCommissions();
 
@@ -74,9 +75,12 @@ export const CommissionsScreen: React.FC = () => {
         commercial={selectedCommercial}
         produits={produits}
         commissionsProduits={commissionsProduits}
+        bonusPaliers={bonusPaliers}
         onAdd={addCommissionProduit}
         onRemove={removeCommissionProduit}
         onUpdateDefaut={updateCommissionDefaut}
+        onAddBonus={addBonusPalier}
+        onRemoveBonus={removeBonusPalier}
       />
     </View>
   );

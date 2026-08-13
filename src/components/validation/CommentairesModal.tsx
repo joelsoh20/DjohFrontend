@@ -51,10 +51,12 @@ export const CommentairesModal: React.FC<CommentairesModalProps> = ({ visible, o
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      {/* Remonte la saisie au-dessus du clavier */}
+      {/* Remonte la saisie au-dessus du clavier — behavior=undefined sur
+          Android ne fait RIEN, 'height' est le comportement qui marche
+          réellement (voir EcranAvecClavier). */}
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={[styles.content, { backgroundColor: theme.surface }]}>
           <Text style={[styles.title, { color: theme.text }]}>💬 Commentaires</Text>

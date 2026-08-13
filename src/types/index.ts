@@ -21,6 +21,7 @@ export interface Utilisateur {
   actif: boolean;
   date_creation: string;
   commissions_produits?: ProductCommission[];
+  bonus_paliers?: BonusPalier[];
 }
 
 // Produit
@@ -40,6 +41,15 @@ export interface ProductCommission {
   product_id: string;
   montant: number;
   produit?: Produit;
+}
+
+// Palier de bonus mensuel d'un commercial : "à partir de N commandes dans
+// le mois, bonus de M FCFA"
+export interface BonusPalier {
+  id: string;
+  user_id: string;
+  nombre_commandes: number;
+  montant: number;
 }
 // Ligne de produit au sein d'une commande
 export interface CommandeLigne {
@@ -103,6 +113,7 @@ export interface CommissionSnapshot {
   nom: string;
   produits_vendus: number;
   montant_du: number;
+  bonus: number;
 }
 
 // Dashboard

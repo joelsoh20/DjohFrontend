@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { commandeService } from '../services/commandeService';
 
+export interface BonusProchainPalier {
+  nombre_commandes: number;
+  montant: number;
+  commandesRestantes: number;
+}
+
 export interface CommercialStats {
   commandesEnvoyees: number;
   commandesLivrees: number;
@@ -9,6 +15,8 @@ export interface CommercialStats {
   produitsVendus: number;
   totalVentes: number;
   bonus: number;
+  bonusPalierAtteint: number | null;
+  bonusProchainPalier: BonusProchainPalier | null;
   totalCommandesMois: number;
   dernieresCommandes: any[];
   evolution?: { mois: string; nb_commandes: number; total_ventes: number }[];
@@ -22,6 +30,8 @@ export const useCommercialDashboard = () => {
     produitsVendus: 0,
     totalVentes: 0,
     bonus: 0,
+    bonusPalierAtteint: null,
+    bonusProchainPalier: null,
     totalCommandesMois: 0,
     dernieresCommandes: []
   });
@@ -41,6 +51,8 @@ export const useCommercialDashboard = () => {
         produitsVendus: res.data.produitsVendus || 0,
         totalVentes: res.data.totalVentes || 0,
         bonus: res.data.bonus || 0,
+        bonusPalierAtteint: res.data.bonusPalierAtteint ?? null,
+        bonusProchainPalier: res.data.bonusProchainPalier ?? null,
         totalCommandesMois: res.data.totalCommandesMois || 0,
         evolution: res.data.evolution || [],
         dernieresCommandes: res.data.dernieresCommandes || []

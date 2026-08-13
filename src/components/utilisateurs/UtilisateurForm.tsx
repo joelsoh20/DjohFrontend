@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Input } from '../Input';
 import { Button } from '../Button';
 import { CommissionConfig } from './CommissionConfig';
+import { BonusConfig } from './BonusConfig';
 import { Role, CommissionMode } from '../../types';
 import { SelectPicker, PickerItem } from '../commande/SelectPicker';
 import { LoadingSpinner } from '../LoadingSpinner';
@@ -19,11 +20,14 @@ interface UtilisateurFormProps {
   isEdit: boolean;
   produits: any[];
   commissionsProduits: any[];
+  bonusPaliers: any[];
   updateField: (field: string, value: string) => void;
   setCommissionMode: (mode: CommissionMode) => void;
   handleSubmit: () => Promise<boolean>;
   addCommissionProduit: (productId: string, montant: number) => void;
   removeCommissionProduit: (productId: string) => void;
+  addBonusPalier: (nombreCommandes: number, montant: number) => void;
+  removeBonusPalier: (palierId: string) => void;
 }
 
 export const UtilisateurForm: React.FC<UtilisateurFormProps> = ({
@@ -34,11 +38,14 @@ export const UtilisateurForm: React.FC<UtilisateurFormProps> = ({
   isEdit,
   produits,
   commissionsProduits,
+  bonusPaliers,
   updateField,
   setCommissionMode,
   handleSubmit,
   addCommissionProduit,
   removeCommissionProduit,
+  addBonusPalier,
+  removeBonusPalier,
 }) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -117,6 +124,22 @@ export const UtilisateurForm: React.FC<UtilisateurFormProps> = ({
             />
           )}
 
+          {/* Bonus mensuel par nombre de commandes (Commercial, après création
+              seulement — les paliers sont rattachés à l'utilisateur en base,
+              il doit donc déjà exister) */}
+          {formData.role === 'commercial' && isEdit && (
+            <BonusConfig
+              bonusPaliers={bonusPaliers}
+              onAddPalier={addBonusPalier}
+              onRemovePalier={removeBonusPalier}
+            />
+          )}
+          {formData.role === 'commercial' && !isEdit && (
+            <Text style={[styles.createFirstNote, { color: theme.textTertiary }]}>
+              Les paliers de bonus mensuel se configurent après la création de l'utilisateur.
+            </Text>
+          )}
+
           {/* Bouton */}
           <Button
             title={isEdit ? t('common.edit') : t('common.create')}
@@ -163,6 +186,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   submitButton: { marginTop: 8 },
+  createFirstNote: { fontSize: 12, fontStyle: 'italic', marginBottom: 16, paddingHorizontal: 4 },
   toastOverlay: {
     flex: 1,
     justifyContent: 'center',
