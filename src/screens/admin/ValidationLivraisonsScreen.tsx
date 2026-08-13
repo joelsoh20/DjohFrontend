@@ -18,6 +18,7 @@ import { CommentairesModal } from '../../components/validation/CommentairesModal
 import { CommandeValidationCard } from '../../components/validation/CommandeValidationCard';
 import { ValidationModal } from '../../components/validation/ValidationModal';
 import { AnnulationModal } from '../../components/validation/AnnulationModal';
+import { ProduitsManquantsModal, ProduitManquant } from '../../components/validation/ProduitsManquantsModal';
 
 export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
@@ -37,6 +38,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
   const [motifAnnulation, setMotifAnnulation] = useState('');
   const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null);
   const [validationEnCours, setValidationEnCours] = useState(false);
+  const [manquants, setManquants] = useState<ProduitManquant[] | null>(null);
 
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -90,14 +92,28 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
     // sans ce contrôle, deux taps rapides sur le même service partent
     // tous les deux avant que le modal ne se désactive visuellement.
     if (validationEnCours) return;
-    if (selectedCommande) {
-      setValidationEnCours(true);
-      try { await handleValider(selectedCommande.id, fraisChoisi, serviceId); } catch {}
+    if (!selectedCommande) return;
+
+    setValidationEnCours(true);
+    try {
+      await handleValider(selectedCommande.id, fraisChoisi, serviceId);
+      setShowValidation(false);
+      setSelectedCommande(null);
+      onRefresh();
+    } catch (err: any) {
+      const produitsManquants = err?.response?.data?.manquants;
+      if (produitsManquants && produitsManquants.length > 0) {
+        // Stock insuffisant : on garde le sélecteur de service ouvert
+        // pour que l'utilisateur puisse directement en choisir un autre,
+        // comme le suggère le message d'erreur.
+        setManquants(produitsManquants);
+      } else {
+        setShowValidation(false);
+        setSelectedCommande(null);
+      }
+    } finally {
       setValidationEnCours(false);
     }
-    setShowValidation(false);
-    setSelectedCommande(null);
-    onRefresh();
   };
 
   const handleAnnulerGroupe = (commande: Commande) => {
@@ -219,6 +235,13 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
         visible={!!showCommentsFor}
         onClose={() => setShowCommentsFor(null)}
         orderId={showCommentsFor || ''}
+        theme={theme}
+      />
+
+      <ProduitsManquantsModal
+        visible={!!manquants}
+        onClose={() => setManquants(null)}
+        manquants={manquants || []}
         theme={theme}
       />
     </View>

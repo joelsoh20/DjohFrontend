@@ -76,7 +76,12 @@ export const useCommandes = (options: UseCommandesOptions = {}): UseCommandesRet
       await commandeService.updateStatut(id, 'livree_payee', fraisLivraison, serviceId);
       await chargerCommandes();
     } catch (err: any) {
-      Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+      // Une rupture de stock (err.response.data.manquants) est affichée
+      // par l'appelant via une modale dédiée listant les produits
+      // manquants — pas de double affichage avec cette Alert générique.
+      if (!err.response?.data?.manquants) {
+        Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+      }
       throw err;
     } finally {
       setActionLoading(null);

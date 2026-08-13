@@ -5,6 +5,7 @@ import { Button } from '../Button';
 import { serviceLivraisonService } from '../../services/serviceLivraisonService';
 import { commandeService } from '../../services/commandeService';
 import { Commande } from '../../types';
+import { ProduitsManquantsModal, ProduitManquant } from '../validation/ProduitsManquantsModal';
 
 interface CorrectionLivraisonModalProps {
   visible: boolean;
@@ -23,6 +24,7 @@ export const CorrectionLivraisonModal: React.FC<CorrectionLivraisonModalProps> =
   const [fraisChoisi, setFraisChoisi] = useState(1000);
   const [serviceChoisiId, setServiceChoisiId] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  const [manquants, setManquants] = useState<ProduitManquant[] | null>(null);
 
   useEffect(() => {
     if (visible && commande) {
@@ -46,13 +48,21 @@ export const CorrectionLivraisonModal: React.FC<CorrectionLivraisonModalProps> =
       onClose();
       Alert.alert('Succès', 'Livraison corrigée');
     } catch (err: any) {
-      Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+      const produitsManquants = err.response?.data?.manquants;
+      if (produitsManquants && produitsManquants.length > 0) {
+        // Stock insuffisant sur le nouveau service : on garde cette
+        // modale ouverte pour que l'utilisateur choisisse un autre service.
+        setManquants(produitsManquants);
+      } else {
+        Alert.alert('Erreur', err.response?.data?.message || 'Erreur');
+      }
     } finally {
       setEnvoi(false);
     }
   };
 
   return (
+    <>
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
@@ -100,6 +110,14 @@ export const CorrectionLivraisonModal: React.FC<CorrectionLivraisonModalProps> =
         </View>
       </View>
     </Modal>
+
+    <ProduitsManquantsModal
+      visible={!!manquants}
+      onClose={() => setManquants(null)}
+      manquants={manquants || []}
+      theme={theme}
+    />
+    </>
   );
 };
 
