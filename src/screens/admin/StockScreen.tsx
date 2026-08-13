@@ -12,7 +12,7 @@ import { StockMouvementsModal } from '../../components/stock/StockMouvementsModa
 
 export const StockScreen: React.FC = () => {
   const { theme } = useTheme();
-  const { isAdmin, utilisateur } = useAuth();
+  const { isAdmin } = useAuth();
   const [stocks, setStocks] = useState<any[]>([]);
   const [produits, setProduits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,8 +21,9 @@ export const StockScreen: React.FC = () => {
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [historiqueProduit, setHistoriqueProduit] = useState<{ id: string; nom: string } | null>(null);
 
-  const isManager = utilisateur?.role === 'manager';
-  const canEdit = isAdmin || isManager;
+  // Le manager ne peut plus approvisionner le stock général (décision
+  // produit) — seul l'admin voit et utilise ce formulaire.
+  const canEdit = isAdmin;
 
   const charger = async () => {
     try {

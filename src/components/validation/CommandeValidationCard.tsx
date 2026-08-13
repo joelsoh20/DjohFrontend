@@ -62,6 +62,20 @@ export const CommandeValidationCard: React.FC<CommandeValidationCardProps> = ({
         <Text style={[styles.totalValue, { color: theme.text }]}>{formatMonnaie(montantTotal)}</Text>
       </View>
 
+      {item.statut === 'livree_payee' && (
+        <>
+          <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+          <View style={styles.totalRow}>
+            <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>🚚 Service de livraison</Text>
+            <Text style={[styles.livraisonValue, { color: theme.text }]}>{item.service_livraison?.nom || 'Non assigné'}</Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>💵 Frais de livraison</Text>
+            <Text style={[styles.livraisonValue, { color: theme.text }]}>{formatMonnaie(item.frais_livraison || 0)}</Text>
+          </View>
+        </>
+      )}
+
       {dernierCommentaire && (
         <View style={[styles.dernierCommentaire, { backgroundColor: theme.primaryLight }]}>
           <View style={styles.dernierCommentaireHeader}>
@@ -125,6 +139,7 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { fontSize: 14, fontWeight: '600' },
   totalValue: { fontSize: 18, fontWeight: 'bold' },
+  livraisonValue: { fontSize: 14, fontWeight: '600' },
   dernierCommentaire: { padding: 10, borderRadius: 8, marginVertical: 6 },
   dernierCommentaireHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   dernierCommentaireAuteur: { fontSize: 12, fontWeight: '600' },

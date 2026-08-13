@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../Button';
 import { serviceLivraisonService } from '../../services/serviceLivraisonService';
@@ -11,10 +11,11 @@ interface ValidationModalProps {
   onFraisChange: (frais: number) => void;
   onServiceSelect: (serviceId: string) => void;
   theme: any;
+  loading?: boolean;
 }
 
 export const ValidationModal: React.FC<ValidationModalProps> = ({
-  visible, onClose, fraisChoisi, onFraisChange, onServiceSelect, theme
+  visible, onClose, fraisChoisi, onFraisChange, onServiceSelect, theme, loading = false
 }) => {
   const [services, setServices] = React.useState<any[]>([]);
 
@@ -34,19 +35,26 @@ export const ValidationModal: React.FC<ValidationModalProps> = ({
           <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Frais de livraison</Text>
           <View style={styles.fraisRow}>
             {[0, 500, 1000, 1500, 2000, 2500].map(frais => (
-              <TouchableOpacity key={frais} style={[styles.fraisBtn, { backgroundColor: fraisChoisi === frais ? theme.primary : theme.surfaceVariant }]} onPress={() => onFraisChange(frais)}>
+              <TouchableOpacity key={frais} disabled={loading} style={[styles.fraisBtn, { backgroundColor: fraisChoisi === frais ? theme.primary : theme.surfaceVariant, opacity: loading ? 0.5 : 1 }]} onPress={() => onFraisChange(frais)}>
                 <Text style={{ color: fraisChoisi === frais ? '#FFF' : theme.text, fontWeight: '600' }}>{frais} F</Text>
               </TouchableOpacity>
             ))}
           </View>
           <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Service de livraison</Text>
-          {services.map((s: any) => (
-            <TouchableOpacity key={s.id} style={[styles.serviceItem, { borderBottomColor: theme.divider }]} onPress={() => onServiceSelect(s.id)}>
-              <View><Text style={[styles.serviceName, { color: theme.text }]}>{s.nom}</Text><Text style={[styles.serviceZone, { color: theme.textSecondary }]}>{s.zone || ''}</Text></View>
-              <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
-            </TouchableOpacity>
-          ))}
-          <Button title="Annuler" onPress={onClose} variant="outline" style={{ marginTop: 12 }} />
+          {loading ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color={theme.primary} />
+              <Text style={{ color: theme.textSecondary, marginTop: 8 }}>Validation en cours…</Text>
+            </View>
+          ) : (
+            services.map((s: any) => (
+              <TouchableOpacity key={s.id} style={[styles.serviceItem, { borderBottomColor: theme.divider }]} onPress={() => onServiceSelect(s.id)}>
+                <View><Text style={[styles.serviceName, { color: theme.text }]}>{s.nom}</Text><Text style={[styles.serviceZone, { color: theme.textSecondary }]}>{s.zone || ''}</Text></View>
+                <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+              </TouchableOpacity>
+            ))
+          )}
+          <Button title="Annuler" onPress={onClose} variant="outline" style={{ marginTop: 12 }} disabled={loading} />
         </View>
       </View>
     </Modal>
@@ -63,4 +71,5 @@ const styles = StyleSheet.create({
   serviceItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1 },
   serviceName: { fontSize: 14, fontWeight: '600' },
   serviceZone: { fontSize: 12 },
+  loadingRow: { alignItems: 'center', paddingVertical: 24 },
 });

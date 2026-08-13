@@ -25,7 +25,7 @@ import { formatDateCourte } from '../../utils/formatDate';
 import { commandeService } from '../../services/commandeService';
 import { CommentModal } from '../../components/commande/CommentModal';
 
-export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const ListeCommandesScreen: React.FC<{ navigation: any; route?: any }> = ({ navigation, route }) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { isAdmin, isManager } = useAuth();
@@ -49,6 +49,19 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
 
   // État pour la modale de discussion
   const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null);
+
+  // Arrivée depuis une notification (nouvelle commande, livraison,
+  // commentaire...) : on filtre la liste sur la commande visée et, si
+  // la notification concerne un commentaire, on ouvre directement la
+  // discussion correspondante.
+  React.useEffect(() => {
+    const orderId = route?.params?.orderId;
+    if (!orderId) return;
+    setSearchText(orderId);
+    if (route?.params?.openComments) {
+      setShowCommentsFor(orderId);
+    }
+  }, [route?.params?.orderId, route?.params?.openComments]);
 
   // État pour la modale d'annulation (motif obligatoire, notifie le commercial)
   const [commandeAAnnuler, setCommandeAAnnuler] = useState<Commande | null>(null);
@@ -184,6 +197,15 @@ export const ListeCommandesScreen: React.FC<{ navigation: any }> = ({ navigation
                   <Text style={[styles.motifLabel, { color: theme.danger }]}>Motif d'annulation :</Text>
                   <Text style={[styles.motifText, { color: theme.text }]}>{item.motif_annulation}</Text>
                 </View>
+              )}
+
+              {item.statut === 'livree_payee' && (
+                <>
+                  <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+                  <Text style={[styles.info, { color: theme.textSecondary }]}>
+                    🚚 {item.service_livraison?.nom || 'Non assigné'} • Frais : {formatMonnaie(item.frais_livraison || 0)}
+                  </Text>
+                </>
               )}
 
               <View style={[styles.divider, { backgroundColor: theme.divider }]} />

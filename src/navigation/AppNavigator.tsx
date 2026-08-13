@@ -9,6 +9,7 @@ import { AuthNavigator } from './AuthNavigator';
 import { AdminNavigator } from './AdminNavigator';
 import { CommercialNavigator } from './CommercialNavigator';
 import { ProfilParametresScreen } from '../screens/ProfilParametresScreen';
+import { navigationRef } from './navigationRef';
 
 export type RootStackParamList = {
   Main: undefined;
@@ -31,7 +32,7 @@ export const AppNavigator: React.FC = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <Stack.Screen name="Main" component={AuthNavigator} />

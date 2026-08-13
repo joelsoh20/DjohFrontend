@@ -15,7 +15,7 @@ import { ListeCommandesScreen } from '../screens/admin/ListeCommandesScreen';
 export type CommercialStackParamList = {
   CommercialAccueil: undefined;
   NouvelleCommande: undefined;
-  ListeCommandes: undefined;
+  ListeCommandes: { orderId?: string; openComments?: boolean } | undefined;
 };
 
 const Tab = createBottomTabNavigator();

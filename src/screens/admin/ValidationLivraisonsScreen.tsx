@@ -85,6 +85,11 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
   };
 
   const handleServiceSelect = async (serviceId: string) => {
+    // Garde contre un double-tap avant même le premier re-render (l'état
+    // loading passé au modal ne s'applique qu'après ce render-ci) :
+    // sans ce contrôle, deux taps rapides sur le même service partent
+    // tous les deux avant que le modal ne se désactive visuellement.
+    if (validationEnCours) return;
     if (selectedCommande) {
       setValidationEnCours(true);
       try { await handleValider(selectedCommande.id, fraisChoisi, serviceId); } catch {}
@@ -198,6 +203,7 @@ export const ValidationLivraisonsScreen: React.FC<{ navigation: any }> = ({ navi
         onFraisChange={setFraisChoisi}
         onServiceSelect={handleServiceSelect}
         theme={theme}
+        loading={validationEnCours}
       />
 
       <AnnulationModal

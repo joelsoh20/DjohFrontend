@@ -37,7 +37,7 @@ type DashboardStackParamList = {
 };
 type CommandesStackParamList = {
    ValidationLivraisons: undefined;
-   ListeCommandes: undefined;
+   ListeCommandes: { orderId?: string; openComments?: boolean } | undefined;
     NouvelleCommande: undefined };
 
 type GestionStackParamList = {
