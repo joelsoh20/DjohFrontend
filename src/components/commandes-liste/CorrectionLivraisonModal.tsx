@@ -15,7 +15,7 @@ interface CorrectionLivraisonModalProps {
   onCorrige: () => void;
 }
 
-const FRAIS_PROPOSES = [0, 500, 1000, 1500, 2000, 2500];
+const FRAIS_PROPOSES = [0, 500, 1000, 1500, 2000, 2500, 3000];
 
 export const CorrectionLivraisonModal: React.FC<CorrectionLivraisonModalProps> = ({
   visible, onClose, commande, theme, onCorrige

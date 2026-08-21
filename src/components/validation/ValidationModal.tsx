@@ -34,7 +34,7 @@ export const ValidationModal: React.FC<ValidationModalProps> = ({
           <Text style={[styles.modalTitle, { color: theme.text }]}>Valider la commande</Text>
           <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Frais de livraison</Text>
           <View style={styles.fraisRow}>
-            {[0, 500, 1000, 1500, 2000, 2500].map(frais => (
+            {[0, 500, 1000, 1500, 2000, 2500, 3000].map(frais => (
               <TouchableOpacity key={frais} disabled={loading} style={[styles.fraisBtn, { backgroundColor: fraisChoisi === frais ? theme.primary : theme.surfaceVariant, opacity: loading ? 0.5 : 1 }]} onPress={() => onFraisChange(frais)}>
                 <Text style={{ color: fraisChoisi === frais ? '#FFF' : theme.text, fontWeight: '600' }}>{frais} F</Text>
               </TouchableOpacity>

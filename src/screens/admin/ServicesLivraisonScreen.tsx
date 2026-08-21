@@ -85,12 +85,16 @@ const handleToggle = async (id: string) => {
   charger();
 };
 
-const handleAjouterStock = async () => {
+// sens: 1 = ajoute au service (depuis le stock général), -1 = retire du
+// service (retourne au stock général). Le clavier numérique standard ne
+// permet pas de saisir un signe "-", donc "Retirer" est un bouton dédié
+// plutôt qu'une saisie négative dans le champ.
+const handleAjouterStock = async (sens: 1 | -1) => {
   if (loadingStock || !selectedProduct || !quantite || !selectedService) return;
   setLoadingStock(true);
   try {
-    await serviceLivraisonService.ajouterStock(selectedService.id, selectedProduct, parseInt(quantite));
-    Alert.alert('Succès', 'Stock transféré au service');
+    await serviceLivraisonService.ajouterStock(selectedService.id, selectedProduct, sens * parseInt(quantite));
+    Alert.alert('Succès', sens === 1 ? 'Stock ajouté au service' : 'Stock retiré du service');
     setQuantite('');
     setSelectedProduct(null);
     charger();
@@ -233,9 +237,10 @@ const handleDelete = async (id: string, nom: string) => {
             </ScrollView>
             <TextInput style={[styles.input, { backgroundColor: theme.surfaceVariant, color: theme.text }]} placeholder="Quantité" keyboardType="numeric" value={quantite} onChangeText={setQuantite} />
             <View style={styles.modalBtns}>
-              <Button title="Fermer" onPress={() => setShowStock(false)} variant="outline" />
-              <Button title="Ajouter" onPress={handleAjouterStock} loading={loadingStock} disabled={loadingStock} />
+              <Button title="Retirer" onPress={() => handleAjouterStock(-1)} variant="danger" loading={loadingStock} disabled={loadingStock} style={{ flex: 1 }} />
+              <Button title="Ajouter" onPress={() => handleAjouterStock(1)} loading={loadingStock} disabled={loadingStock} style={{ flex: 1 }} />
             </View>
+            <Button title="Fermer" onPress={() => setShowStock(false)} variant="outline" style={{ marginTop: 10 }} />
           </View>
         </View>
       </Modal>
