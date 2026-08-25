@@ -124,6 +124,27 @@ export const StatsLivraisonScreen: React.FC = () => {
                       </Text>
                     </View>
                   )}
+
+                  {/* Répartition du nombre de livraisons par montant de
+                      frais (1000 FCFA, 1500 FCFA...) pour ce service. */}
+                  {s.repartitionFrais && s.repartitionFrais.length > 0 && (
+                    <>
+                      <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+                      <Text style={[styles.repartitionTitle, { color: theme.textSecondary }]}>
+                        Livraisons par montant de frais
+                      </Text>
+                      {s.repartitionFrais.map(r => (
+                        <View key={r.montant} style={styles.statRow}>
+                          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                            {formatMonnaie(r.montant)}
+                          </Text>
+                          <Text style={[styles.statValue, { color: theme.text }]}>
+                            {r.nombre} livraison{r.nombre > 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                      ))}
+                    </>
+                  )}
                 </View>
               ))}
             </>
@@ -160,6 +181,7 @@ const styles = StyleSheet.create({
   inactifText: { fontSize: 10, fontWeight: '600' },
   nombreCommandes: { fontSize: 12, marginTop: 2 },
   divider: { height: 1, marginVertical: 10 },
+  repartitionTitle: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   statLabel: { fontSize: 13 },
   statValue: { fontSize: 14, fontWeight: '600' },

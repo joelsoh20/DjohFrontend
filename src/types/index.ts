@@ -139,6 +139,11 @@ export interface VenteParService {
   nombreCommandes: number;
 }
 
+export interface RepartitionFrais {
+  montant: number;
+  nombre: number;
+}
+
 export interface StatsServiceLivraison {
   serviceId: string;
   nom: string;
@@ -149,6 +154,7 @@ export interface StatsServiceLivraison {
   fraisLivraisonTotal: number;
   montantAPercevoir: number;
   beneficeNet: number;
+  repartitionFrais: RepartitionFrais[];
 }
 
 export interface StatsPeriode {

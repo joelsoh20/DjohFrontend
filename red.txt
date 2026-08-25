@@ -162,4 +162,14 @@ CREATE TABLE order_comments (
   date_creation TIMESTAMPTZ DEFAULT NOW()
 );
 
-
+SELECT
+  sl.nom AS service_livraison,
+  COUNT(c.id) AS nombre_livraisons
+FROM services_livraison sl
+LEFT JOIN commandes c
+  ON c.service_livraison_id = sl.id
+  AND c.statut = 'livree_payee'
+  AND c.date_statut_livree >= date_trunc('month', CURRENT_DATE)
+  AND c.date_statut_livree <  date_trunc('month', CURRENT_DATE) + interval '1 month'
+GROUP BY sl.id, sl.nom
+ORDER BY nombre_livraisons DESC;
