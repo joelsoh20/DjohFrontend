@@ -13,6 +13,13 @@ import { Button } from '../components/Button';
 import { Langue, ThemeMode } from '../types';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '../services/notificationService';
+import { secureStorage } from '../services/secureStorage';
+
+// Clé de préférence locale : la permission OS ne peut pas être révoquée
+// depuis l'app (une fois accordée, Notifications.getPermissionsAsync()
+// répond toujours "granted"), donc on ne peut pas se fier à elle seule
+// pour savoir si l'utilisateur a désactivé les notifications côté app.
+const CLE_NOTIFICATIONS_DESACTIVEES = 'notifications_desactivees';
 
 export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { t } = useTranslation();
@@ -32,9 +39,15 @@ export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigati
   } = useProfil();
 
   useEffect(() => {
-  Notifications.getPermissionsAsync().then(({ status }) => {
+  (async () => {
+    const desactivees = await secureStorage.getItem(CLE_NOTIFICATIONS_DESACTIVEES);
+    if (desactivees === 'true') {
+      setNotifEnabled(false);
+      return;
+    }
+    const { status } = await Notifications.getPermissionsAsync();
     setNotifEnabled(status === 'granted');
-  });
+  })();
 }, []);
 
   return (
@@ -95,6 +108,7 @@ export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigati
                   const { status } = await Notifications.requestPermissionsAsync();
                   if (status === 'granted') {
                     setNotifEnabled(true);
+                    await secureStorage.removeItem(CLE_NOTIFICATIONS_DESACTIVEES);
                     const tokenData = await Notifications.getExpoPushTokenAsync({
                       projectId: '29287523-3a5f-413b-8fe1-4326daff789c'
                     });
@@ -103,8 +117,22 @@ export const ProfilParametresScreen: React.FC<{ navigation: any }> = ({ navigati
                     setNotifEnabled(false);
                   }
                 } else {
-                  // Désactiver
+                  // Désactiver : la permission OS ne peut pas être révoquée
+                  // depuis l'app, donc on supprime le token du backend
+                  // (le serveur ne saura plus où envoyer) et on mémorise
+                  // le choix pour que ce switch ET useNotifications (au
+                  // prochain lancement de l'app) le respectent tous les
+                  // deux — sinon l'un des deux réactivait tout silencieusement.
                   setNotifEnabled(false);
+                  await secureStorage.setItem(CLE_NOTIFICATIONS_DESACTIVEES, 'true');
+                  try {
+                    const tokenData = await Notifications.getExpoPushTokenAsync({
+                      projectId: '29287523-3a5f-413b-8fe1-4326daff789c'
+                    });
+                    await notificationService.removeToken(tokenData.data);
+                  } catch {
+                    // pas de token à supprimer (jamais enregistré, ou permission déjà absente)
+                  }
                   Alert.alert(
                     'Notifications',
                     'Vous ne recevrez plus de notifications.',

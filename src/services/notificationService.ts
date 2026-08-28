@@ -63,6 +63,18 @@ export const notificationService = {
     console.log('❌ Erreur enregistrement token:', err?.response?.status, err?.response?.data || err?.message);
   }
 },
+
+  // Supprimer le token du backend (désactivation des notifications) — sans
+  // ça, le serveur continue d'envoyer des pushs à cet appareil même après
+  // que l'utilisateur ait "désactivé" les notifications dans l'app,
+  // puisque la permission OS elle-même ne peut pas être révoquée par l'app.
+  removeToken: async (token: string) => {
+    try {
+      await api.delete('/notifications/token', { data: { token } });
+    } catch (err: any) {
+      console.log('❌ Erreur suppression token:', err?.response?.status, err?.response?.data || err?.message);
+    }
+  },
   // Envoyer une notification locale
   sendLocal: async (title: string, body: string, data?: any) => {
     await Notifications.scheduleNotificationAsync({

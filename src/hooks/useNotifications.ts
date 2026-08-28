@@ -2,8 +2,15 @@ import { useEffect, useRef } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '../services/notificationService';
+import { secureStorage } from '../services/secureStorage';
 import { useAuth } from '../context/AuthContext';
 import { navigateToOrder, navigationRef } from '../navigation/navigationRef';
+
+// Doit rester identique à la clé utilisée dans ProfilParametresScreen.tsx :
+// sans cette vérification, ce hook redemande la permission et
+// réenregistre le token à chaque lancement de l'app, ce qui annule
+// silencieusement le choix "désactiver les notifications" de l'utilisateur.
+const CLE_NOTIFICATIONS_DESACTIVEES = 'notifications_desactivees';
 
 export const useNotifications = () => {
   const { utilisateur, isAdmin, isManager } = useAuth();
@@ -41,6 +48,12 @@ export const useNotifications = () => {
 
     const setup = async () => {
       try {
+        const desactivees = await secureStorage.getItem(CLE_NOTIFICATIONS_DESACTIVEES);
+        if (desactivees === 'true') {
+          console.log('📱 Notifications désactivées par l\'utilisateur — pas de (ré)enregistrement du token');
+          return;
+        }
+
         const granted = await notificationService.requestPermission();
         if (!granted) {
           console.log('📱 Permission notifications refusée');
